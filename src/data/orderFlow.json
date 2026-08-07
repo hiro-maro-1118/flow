@@ -1,0 +1,104 @@
+{
+  "id": "order-processing",
+  "title": "グローバル受注・出荷・会計連携フロー",
+  "description": "顧客の注文からポータルUIでの登録、認証チェック、社内査定、基幹システムによる在庫引当、WMS（倉庫）連携、DB保存、結果のポータル表示、および会計システム連携までを10個のスイムレーンで貫く大規模な業務プロセスです。",
+  "swimlanes": [
+    { "id": "customer", "name": "① 顧客 (アクター)", "color": "#818cf8" },
+    { "id": "portal", "name": "② 顧客ポータル (UI)", "color": "#34d399", "isImageLane": true },
+    { "id": "auth", "name": "③ 認証・権限 (システム)", "color": "#fb7185" },
+    { "id": "sales", "name": "④ 営業窓口 (アクター)", "color": "#60a5fa" },
+    { "id": "internal", "name": "⑤ 社内管理 (UI)", "color": "#0d9488" },
+    { "id": "core", "name": "⑥ 基幹処理 (システム)", "color": "#f59e0b" },
+    { "id": "wms", "name": "⑦ 倉庫WMS (システム)", "color": "#fb923c" },
+    { "id": "support", "name": "⑧ 運用監視 (アクター)", "color": "#a78bfa" },
+    { "id": "db", "name": "⑨ データベース (データ)", "color": "#ec4899" },
+    { "id": "accounting", "name": "⑩ 会計連携 (システム)", "color": "#14b8a6" }
+  ],
+  "nodes": [
+    {
+      "id": "ord-node-1",
+      "laneId": "customer",
+      "row": 1,
+      "title": "注文内容の確定・申請",
+      "description": "顧客が購入したい商品と数量を決定し、発注手続きを開始します。",
+      "details": "顧客自身による最終確認ステップです。"
+    },
+    {
+      "id": "ord-node-2",
+      "laneId": "portal",
+      "row": 1,
+      "title": "注文入力画面",
+      "description": "顧客ポータルの注文画面に必要な情報を入力し、登録を行います。",
+      "image": "images/order_input_screen.png",
+      "details": "顧客コード、商品コード、数量などを指定。リアルタイムに仮計算が行われます。"
+    },
+    {
+      "id": "ord-node-3",
+      "laneId": "auth",
+      "row": 1,
+      "title": "APIトークン検証",
+      "description": "システムへのアクセス権限およびAPIセキュリティトークンを自動で検証します。",
+      "details": "セッションの有効性を担保します。"
+    },
+    {
+      "id": "ord-node-4",
+      "laneId": "sales",
+      "row": 2,
+      "title": "注文データの一次査定",
+      "description": "営業窓口担当者が、大口顧客の特別割引などが正しく適用されているか確認します。",
+      "details": "必要に応じて金額の手修正を行います。"
+    },
+    {
+      "id": "ord-node-5",
+      "laneId": "core",
+      "row": 2,
+      "title": "在庫自動引き当て処理",
+      "description": "基幹システムがリアルタイムで倉庫在庫を確認し、引き予約を確定します。",
+      "details": "在庫数が十分な場合は「引当完了」とし、不足している場合は「引当エラー」として差し戻します。"
+    },
+    {
+      "id": "ord-node-6",
+      "laneId": "wms",
+      "row": 3,
+      "title": "出荷指示・ピッキング指示",
+      "description": "倉庫管理システム（WMS）に対して、製品のピッキングおよび梱包指示データを送信します。",
+      "details": "倉庫側のロボットまたは作業員への指示が生成されます。"
+    },
+    {
+      "id": "ord-node-7",
+      "laneId": "db",
+      "row": 3,
+      "title": "受注データ保存 (RDB)",
+      "description": "確定した受注情報および在庫の減算履歴をリレーショナルデータベースに保存します。",
+      "details": "トランザクションのACID特性を保証。テーブル: `t_order_header`, `t_inventory`"
+    },
+    {
+      "id": "ord-node-8",
+      "laneId": "accounting",
+      "row": 3,
+      "title": "売上・売掛金自動計上",
+      "description": "会計連携モジュールが、今回の取引に対する仕訳データを自動生成して送信します。",
+      "details": "勘定科目：売掛金 / 売上高 の仕訳が自動で作成されます。"
+    },
+    {
+      "id": "ord-node-9",
+      "laneId": "portal",
+      "row": 4,
+      "title": "受注完了確認画面",
+      "description": "顧客に対して注文完了の通知と、採番された注文番号を表示します。",
+      "image": "images/order_complete_screen.png",
+      "details": "注文番号: ORD-2026-9872 が発行され、領収書PDF of Invoiceのダウンロードが可能になります。"
+    }
+  ],
+  "edges": [
+    { "from": "ord-node-1", "to": "ord-node-2", "label": "入力開始" },
+    { "from": "ord-node-2", "to": "ord-node-3", "label": "API送信" },
+    { "from": "ord-node-3", "to": "ord-node-4", "label": "認証完了" },
+    { "from": "ord-node-4", "to": "ord-node-5", "label": "一次査定OK" },
+    { "from": "ord-node-5", "to": "ord-node-6", "label": "在庫引き当て成功" },
+    { "from": "ord-node-5", "to": "ord-node-1", "label": "在庫不足・再調整（前に戻る）", "isReturn": true },
+    { "from": "ord-node-6", "to": "ord-node-7", "label": "WMS受付" },
+    { "from": "ord-node-7", "to": "ord-node-8", "label": "DBコミット" },
+    { "from": "ord-node-8", "to": "ord-node-9", "label": "会計処理完了" }
+  ]
+}

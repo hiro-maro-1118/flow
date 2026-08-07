@@ -1,0 +1,96 @@
+{
+  "id": "vacation-claim",
+  "title": "有給休暇取得申請・承認フロー",
+  "description": "有給休暇の取得における日程調整、勤怠ポータル申請、API権限検証、上司確認、承認、有給残数自動判定、DBシフトテーブル保存、および給与計算システム連携までを10個のスイムレーンで結ぶ業務プロセスです。",
+  "swimlanes": [
+    { "id": "customer", "name": "① 顧客 (アクター)", "color": "#818cf8" },
+    { "id": "portal", "name": "② 顧客ポータル (UI)", "color": "#34d399", "isImageLane": true },
+    { "id": "auth", "name": "③ 認証・権限 (システム)", "color": "#fb7185" },
+    { "id": "sales", "name": "④ 営業窓口 (アクター)", "color": "#60a5fa" },
+    { "id": "internal", "name": "⑤ 社内管理 (UI)", "color": "#0d9488" },
+    { "id": "core", "name": "⑥ 基幹処理 (システム)", "color": "#f59e0b" },
+    { "id": "wms", "name": "⑦ 倉庫WMS (システム)", "color": "#fb923c" },
+    { "id": "support", "name": "⑧ 運用監視 (アクター)", "color": "#a78bfa" },
+    { "id": "db", "name": "⑨ データベース (データ)", "color": "#ec4899" },
+    { "id": "accounting", "name": "⑩ 会計連携 (システム)", "color": "#14b8a6" }
+  ],
+  "nodes": [
+    {
+      "id": "vac-node-1",
+      "laneId": "customer",
+      "row": 1,
+      "title": "休暇日程の検討",
+      "description": "自身の所属チーム内でスケジュールを調整し、休暇日を決定します。",
+      "details": "繁忙期を避け、チーム内の他メンバーとの休み重複がないか考慮します。"
+    },
+    {
+      "id": "vac-node-2",
+      "laneId": "portal",
+      "row": 1,
+      "title": "休暇申請入力画面",
+      "description": "勤怠ポータルにログインし、有休希望日と理由を入力します。",
+      "image": "images/expense_input_screen.png",
+      "details": "有給休暇、特別休暇、慶弔休暇などの区分を選択し、申請ボタンを押します。"
+    },
+    {
+      "id": "vac-node-3",
+      "laneId": "auth",
+      "row": 1,
+      "title": "勤怠API権限検証",
+      "description": "システムが社員のIDおよびログイン権限の有効性を検証します。",
+      "details": "OAuth2トークンの検証が自動で行われます。"
+    },
+    {
+      "id": "vac-node-4",
+      "laneId": "sales",
+      "row": 2,
+      "title": "上司による日程確認",
+      "description": "営業部門の上司が決裁処理のため、対象期間の業務への影響を確認します。",
+      "details": "期間中の打ち合わせ予定や緊急対応の引き継ぎが完了しているか審査します。"
+    },
+    {
+      "id": "vac-node-5",
+      "laneId": "internal",
+      "row": 2,
+      "title": "休暇承認ダッシュボード",
+      "description": "上司側の承認管理UIに申請内容と他メンバーのシフト状況が表示されます。",
+      "image": "images/expense_approval_screen.png",
+      "details": "確認のうえ、「承認」または却下理由を添えて「差し戻し」を選択します。"
+    },
+    {
+      "id": "vac-node-6",
+      "laneId": "core",
+      "row": 2,
+      "title": "有給残日数自動判定",
+      "description": "勤怠システムが申請者の現在の有給残日数を確認し、不足していないか自動判定します。",
+      "details": "残日数が十分な場合は「申請可能」とし、残日数がマイナスになる場合はエラーとして申請を差し戻します。"
+    },
+    {
+      "id": "vac-node-7",
+      "laneId": "db",
+      "row": 3,
+      "title": "休暇予定登録・確定",
+      "description": "承認が下りた休暇申請データをデータベースのシフト履歴テーブルに保存します。",
+      "details": "テーブル: `t_attendance_claim`、ステータス: `APPROVED`。"
+    },
+    {
+      "id": "vac-node-8",
+      "laneId": "accounting",
+      "row": 3,
+      "title": "給与・勤怠データ同期",
+      "description": "有給取得の実績を給与計算システムと同期し、勤怠控除または有給消化の仕訳準備を行います。",
+      "details": "給与確定処理時に自動連携され、有給消化日数にプラスされます。"
+    }
+  ],
+  "edges": [
+    { "from": "vac-node-1", "to": "vac-node-2", "label": "日程決定" },
+    { "from": "vac-node-2", "to": "vac-node-3", "label": "申請送信" },
+    { "from": "vac-node-3", "to": "vac-node-4", "label": "認証完了" },
+    { "from": "vac-node-4", "to": "vac-node-5", "label": "上司へ通知" },
+    { "from": "vac-node-5", "to": "vac-node-6", "label": "上司承認" },
+    { "from": "vac-node-5", "to": "vac-node-2", "label": "却下による日程再考", "isReturn": true },
+    { "from": "vac-node-6", "to": "vac-node-7", "label": "残数OK" },
+    { "from": "vac-node-7", "to": "vac-node-8", "label": "DB書き込み完了" },
+    { "from": "vac-node-8", "to": "vac-node-1", "label": "年間シフト同期・リセット（最初に戻る）", "isReturn": true }
+  ]
+}

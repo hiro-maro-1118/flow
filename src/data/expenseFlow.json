@@ -1,0 +1,95 @@
+{
+  "id": "expense-claim",
+  "title": "経費精算・自動査定・監査連携フロー",
+  "description": "従業員による経費申請から、自動監査チェック、上司承認、経理最終確認、DB書き込み、銀行振込連携までの全10ステップの承認フローです。却下・再調整の戻りを含みます。",
+  "swimlanes": [
+    { "id": "customer", "name": "① 申請者 (アクター)", "color": "#818cf8" },
+    { "id": "portal", "name": "② 経費入力 (UI)", "color": "#34d399", "isImageLane": true },
+    { "id": "auth", "name": "③ 組織マスタ (システム)", "color": "#fb7185" },
+    { "id": "sales", "name": "④ 承認上司 (アクター)", "color": "#60a5fa" },
+    { "id": "internal", "name": "⑤ 承認画面 (UI)", "color": "#0d9488" },
+    { "id": "core", "name": "⑥ 自動監査 (システム)", "color": "#f59e0b" },
+    { "id": "wms", "name": "⑦ 購買連携 (システム)", "color": "#fb923c" },
+    { "id": "support", "name": "⑧ 経理担当 (アクター)", "color": "#a78bfa" },
+    { "id": "db", "name": "⑨ 保存DB (データ)", "color": "#ec4899" },
+    { "id": "accounting", "name": "⑩ 銀行FB (システム)", "color": "#14b8a6" }
+  ],
+  "nodes": [
+    {
+      "id": "exp-node-1",
+      "laneId": "portal",
+      "row": 1,
+      "title": "経費申請入力画面",
+      "description": "申請者が領収書画像をアップロードし、費目や金額を入力します。",
+      "image": "images/expense_input_screen.png",
+      "details": "領収書のOCR解析が自動で走り、日付と金額が自動補完されます。"
+    },
+    {
+      "id": "exp-node-2",
+      "laneId": "auth",
+      "row": 1,
+      "title": "承認ルート自動判定",
+      "description": "申請者の所属部署と役職マスタを参照し、適切な承認上司（決裁者）を特定します。",
+      "details": "金額が10万円を超える場合は部長承認、それ以下は課長承認とします。"
+    },
+    {
+      "id": "exp-node-3",
+      "laneId": "core",
+      "row": 1,
+      "title": "規定・重複自動チェック",
+      "description": "過去の申請と日付・金額・店舗が一致していないか（二重申請の検知）、上限額を超えていないかを検証します。",
+      "details": "異常を検知した場合は警告フラグを付与し、承認者に通知します。"
+    },
+    {
+      "id": "exp-node-4",
+      "laneId": "internal",
+      "row": 2,
+      "title": "経費承認ダッシュボード",
+      "description": "承認上司の画面に申請一覧が表示されます。領収書と入力内容を突合します。",
+      "image": "images/expense_approval_screen.png",
+      "details": "「承認」「差し戻し」の判断を下します。差し戻す場合は理由の記入が必要です。"
+    },
+    {
+      "id": "exp-node-5",
+      "laneId": "sales",
+      "row": 2,
+      "title": "上司の承認意思決定",
+      "description": "上司が業務上の妥当性（出張の必要性など）を確認し、決裁ボタンを押します。",
+      "details": "不適切な場合は、経費申請入力画面へ差し戻します。"
+    },
+    {
+      "id": "exp-node-6",
+      "laneId": "support",
+      "row": 3,
+      "title": "経理担当の最終監査",
+      "description": "経理担当者が、勘定科目の分類（旅費交通費か、会議費か等）や税区分が適正か最終チェックします。",
+      "details": "経理規程に準拠しているかを精査します。"
+    },
+    {
+      "id": "exp-node-7",
+      "laneId": "db",
+      "row": 3,
+      "title": "経費確定保存",
+      "description": "監査を通過した経費データを本番データベースに書き込みます。ステータスは「支払待ち」になります。",
+      "details": "テーブル: `t_expense_claim`、ステータス: `APPROVED`"
+    },
+    {
+      "id": "exp-node-8",
+      "laneId": "accounting",
+      "row": 3,
+      "title": "全銀データ生成・FB連携",
+      "description": "ファームバンキング（FB）システムと連携し、支払日に合わせた振込用の全銀フォーマットデータを自動出力します。",
+      "details": "銀行の振込システムにデータがバッチ送信されます。"
+    }
+  ],
+  "edges": [
+    { "from": "exp-node-1", "to": "exp-node-2", "label": "申請送信" },
+    { "from": "exp-node-2", "to": "exp-node-3", "label": "ルート決定" },
+    { "from": "exp-node-3", "to": "exp-node-4", "label": "自動監査OK" },
+    { "from": "exp-node-4", "to": "exp-node-5", "label": "内容査定" },
+    { "from": "exp-node-5", "to": "exp-node-6", "label": "上司承認" },
+    { "from": "exp-node-5", "to": "exp-node-1", "label": "不備・却下（前に戻る）", "isReturn": true },
+    { "from": "exp-node-6", "to": "exp-node-7", "label": "経理承認" },
+    { "from": "exp-node-7", "to": "exp-node-8", "label": "データ保存" }
+  ]
+}

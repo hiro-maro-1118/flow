@@ -1,0 +1,108 @@
+{
+  "id": "credit-card-flow",
+  "title": "クレジットカード入会審査・発行フロー（条件分岐）",
+  "description": "顧客からの申請データを基に、基幹処理による自動審査スコアリングチェックを行い、「YES：自動承認」「NO：即時却下」「GRAY：手動審査」の3方向に判断分岐する、条件分岐を網羅した10レーン業務プロセスです。",
+  "swimlanes": [
+    { "id": "customer", "name": "① 顧客 (アクター)", "color": "#818cf8" },
+    { "id": "portal", "name": "② 顧客ポータル (UI)", "color": "#34d399", "isImageLane": true },
+    { "id": "auth", "name": "③ 認証・権限 (システム)", "color": "#fb7185" },
+    { "id": "sales", "name": "④ 営業窓口 (アクター)", "color": "#60a5fa" },
+    { "id": "internal", "name": "⑤ 社内管理 (UI)", "color": "#0d9488" },
+    { "id": "core", "name": "⑥ 基幹処理 (システム)", "color": "#f59e0b" },
+    { "id": "wms", "name": "⑦ 倉庫WMS (システム)", "color": "#fb923c" },
+    { "id": "support", "name": "⑧ 運用監視 (アクター)", "color": "#a78bfa" },
+    { "id": "db", "name": "⑨ データベース (データ)", "color": "#ec4899" },
+    { "id": "accounting", "name": "⑩ 会計連携 (システム)", "color": "#14b8a6" }
+  ],
+  "nodes": [
+    {
+      "id": "card-node-1",
+      "laneId": "customer",
+      "row": 1,
+      "title": "カード入会申請の決意",
+      "description": "各種規約に同意し、本人確認書類（免許証など）を手元に準備して申込を開始します。",
+      "details": "オンライン入会特典などの条件も事前に確認します。"
+    },
+    {
+      "id": "card-node-2",
+      "laneId": "portal",
+      "row": 1,
+      "title": "入会フォーム入力画面",
+      "description": "氏名、住所、勤務先、年収などの個人情報をWEB申込フォームに入力します。",
+      "image": "images/order_input_screen.png",
+      "details": "入力データの即時バリデーションが行われ、不備があれば赤字で警告されます。"
+    },
+    {
+      "id": "card-node-3",
+      "laneId": "auth",
+      "row": 1,
+      "title": "本人確認書類アップロード",
+      "description": "アップロードされた証明書画像をAI-OCRが解析し、入力された情報と自動突合します。",
+      "details": "画像鮮明度や顔写真の有無を自動検知します。"
+    },
+    {
+      "id": "card-node-4",
+      "laneId": "core",
+      "row": 2,
+      "type": "decision",
+      "title": "【判断分岐】自動スコアリング",
+      "description": "信用情報機関に照会し、申請者の返済能力スコアを自動演算して3方向に分岐させます。",
+      "details": "スコア判定基準: 80点以上➔自動承認、50〜79点➔手動審査、49点以下➔即時却下。"
+    },
+    {
+      "id": "card-node-5",
+      "laneId": "internal",
+      "row": 3,
+      "title": "自動承認・発行指示管理",
+      "description": "スコア優秀により自動で承認され、カードエンボス（印刷・発行）指示が生成されます。",
+      "image": "images/expense_approval_screen.png",
+      "details": "総務・発行ラインに対して即時に物理カード製造指示が飛びます。"
+    },
+    {
+      "id": "card-node-6",
+      "laneId": "sales",
+      "row": 3,
+      "title": "手動審査（二次査定）",
+      "description": "スコアが基準値境界線上のため、営業・審査部門の担当者が手動で詳細履歴を確認します。",
+      "details": "在籍確認の電話連絡や、別属性情報との突合審査を手作業で行います。"
+    },
+    {
+      "id": "card-node-7",
+      "laneId": "portal",
+      "row": 3,
+      "title": "即時却下・通知画面",
+      "description": "スコア基準値未満により、お見送りの旨をポータル画面および自動メールで通知します。",
+      "image": "images/order_complete_screen.png",
+      "details": "個人情報保護の観点から、詳細な審査落ち理由は開示されません。"
+    },
+    {
+      "id": "card-node-8",
+      "laneId": "db",
+      "row": 4,
+      "title": "カード会員レコード保存(DB)",
+      "description": "新しく発行されたカード会員のレコードおよび与信枠情報をデータベースに保存します。",
+      "details": "テーブル: `t_card_member`, `t_credit_line`。"
+    },
+    {
+      "id": "card-node-9",
+      "laneId": "accounting",
+      "row": 4,
+      "title": "年会費・売上仮計上",
+      "description": "カード発行に伴う初年度年会費、またはポイント等の取引開始仕訳データを会計連携します。",
+      "details": "売掛金 / 入会売上高 の自動仕訳起票。"
+    }
+  ],
+  "edges": [
+    { "from": "card-node-1", "to": "card-node-2", "label": "申込開始" },
+    { "from": "card-node-2", "to": "card-node-3", "label": "データ送信" },
+    { "from": "card-node-3", "to": "card-node-4", "label": "画像突合OK" },
+    { "from": "card-node-4", "to": "card-node-5", "label": "[分岐1] スコア80点以上 (自動承認)" },
+    { "from": "card-node-4", "to": "card-node-6", "label": "[分岐2] スコア50-79点 (手動審査)" },
+    { "from": "card-node-4", "to": "card-node-7", "label": "[分岐3] スコア49点以下 (即時却下)" },
+    { "from": "card-node-6", "to": "card-node-5", "label": "手動承認可決" },
+    { "from": "card-node-6", "to": "card-node-2", "label": "書類不備で最初期差し戻し", "isReturn": true },
+    { "from": "card-node-5", "to": "card-node-8", "label": "発行指示完了" },
+    { "from": "card-node-8", "to": "card-node-9", "label": "DB永続化" },
+    { "from": "card-node-9", "to": "card-node-1", "label": "カード配送・利用開始（最初に戻る）", "isReturn": true }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "id": "parallel-slot-demo",
+  "title": "並列処理デモ（同一レーン・同一ステップに複数BOX）",
+  "description": "1つのスイムレーン・1つのrowに2つのBOXを配置するデモフローです。注文受付後、同時進行する「在庫引き当て」と「決済処理」が同じ⑥基幹処理レーンのステップ2に並列で配置されています。",
+  "swimlanes": [
+    { "id": "customer", "name": "① 顧客 (アクター)", "color": "#818cf8" },
+    { "id": "portal", "name": "② 顧客ポータル (UI)", "color": "#34d399", "isImageLane": true },
+    { "id": "auth", "name": "③ 認証・権限 (システム)", "color": "#fb7185" },
+    { "id": "sales", "name": "④ 営業窓口 (アクター)", "color": "#60a5fa" },
+    { "id": "internal", "name": "⑤ 社内管理 (UI)", "color": "#0d9488" },
+    { "id": "core", "name": "⑥ 基幹処理 (システム)", "color": "#f59e0b" },
+    { "id": "wms", "name": "⑦ 倉庫WMS (システム)", "color": "#fb923c" },
+    { "id": "support", "name": "⑧ 運用監視 (アクター)", "color": "#a78bfa" },
+    { "id": "db", "name": "⑨ データベース (データ)", "color": "#ec4899" },
+    { "id": "accounting", "name": "⑩ 会計連携 (システム)", "color": "#14b8a6" }
+  ],
+  "nodes": [
+    {
+      "id": "para-node-1",
+      "laneId": "customer",
+      "row": 1,
+      "title": "商品を選択・注文",
+      "description": "顧客がECサイトから商品を選択してカートに入れ、注文を確定します。"
+    },
+    {
+      "id": "para-node-2",
+      "laneId": "portal",
+      "row": 1,
+      "title": "注文確定画面",
+      "description": "注文内容の確認画面。決済方法・配送先を入力して確定します。",
+      "image": "images/order_input_screen.png"
+    },
+    {
+      "id": "para-node-3",
+      "laneId": "auth",
+      "row": 1,
+      "title": "会員認証・セッション検証",
+      "description": "ログインセッションとAPIキーの有効性を確認します。"
+    },
+    {
+      "id": "para-node-check",
+      "laneId": "core",
+      "row": 1,
+      "type": "decision",
+      "title": "【判断分岐】注文内容チェック",
+      "description": "注文データの整合性・在庫状況・決済可否を並列で同時チェックします。"
+    },
+    {
+      "id": "para-node-4a",
+      "laneId": "core",
+      "row": 2,
+      "slot": 0,
+      "title": "在庫引き当て処理",
+      "description": "倉庫システムに対して該当商品の在庫を引き当てロックします。在庫不足の場合はエラーを返します。",
+      "details": "在庫引き当てAPI: PUT /api/inventory/{sku}/reserve"
+    },
+    {
+      "id": "para-node-4b",
+      "laneId": "core",
+      "row": 2,
+      "slot": 1,
+      "title": "決済処理（カード請求）",
+      "description": "クレジットカード決済ゲートウェイに対してオーソリ（与信確保）リクエストを送信します。",
+      "details": "決済API: POST /api/payment/authorize"
+    },
+    {
+      "id": "para-node-5",
+      "laneId": "wms",
+      "row": 3,
+      "title": "出荷指示・ピッキングリスト作成",
+      "description": "倉庫WMSに出荷指示を発行し、ピッキングリストを自動出力します。"
+    },
+    {
+      "id": "para-node-6",
+      "laneId": "db",
+      "row": 3,
+      "title": "注文履歴・在庫テーブル更新",
+      "description": "注文確定レコードおよび在庫テーブルの引き当て数量を更新します。",
+      "details": "テーブル: `t_order`, `t_inventory`"
+    },
+    {
+      "id": "para-node-7",
+      "laneId": "accounting",
+      "row": 4,
+      "title": "売上計上・請求書発行",
+      "description": "注文確定後、売上計上の仕訳データを生成し、請求書PDFを顧客に自動送付します。"
+    },
+    {
+      "id": "para-node-8",
+      "laneId": "customer",
+      "row": 4,
+      "title": "注文確認メール受信",
+      "description": "顧客に注文番号・配送予定日を記載した確認メールが届き、マイページから追跡できます。"
+    }
+  ],
+  "edges": [
+    { "from": "para-node-1", "to": "para-node-2", "label": "注文操作" },
+    { "from": "para-node-2", "to": "para-node-3", "label": "注文送信" },
+    { "from": "para-node-3", "to": "para-node-check", "label": "認証OK" },
+    { "from": "para-node-check", "to": "para-node-4a", "label": "在庫確認ルート" },
+    { "from": "para-node-check", "to": "para-node-4b", "label": "決済確認ルート" },
+    { "from": "para-node-4a", "to": "para-node-5", "label": "在庫確保OK" },
+    { "from": "para-node-4b", "to": "para-node-6", "label": "決済オーソリ完了" },
+    { "from": "para-node-5", "to": "para-node-7", "label": "出荷指示完了" },
+    { "from": "para-node-6", "to": "para-node-7", "label": "DB更新完了" },
+    { "from": "para-node-7", "to": "para-node-8", "label": "売上計上・通知送付" }
+  ]
+}
