@@ -161,7 +161,7 @@ const RotateCcw = ({ size = 16, className, style }) => (
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI-Flow Studio | 業務フロー描画ポータブル</title>
   <style>
-    \${rawCss}
+    ${rawCss}
     body {
       margin: 0;
       padding: 0;
@@ -198,9 +198,9 @@ const RotateCcw = ({ size = 16, className, style }) => (
   <script type="text/babel">
     const { useState, useRef, useLayoutEffect, useEffect, useCallback } = React;
 
-    \${iconsCode}
+    ${iconsCode}
 
-    const sampleFlows = \${JSON.stringify(flows, null, 2)};
+    const sampleFlows = ${JSON.stringify(flows, null, 2)};
 
     // ポータブル環境での未定義エラー防止用ダミー定義
     const rawCss = "";
@@ -210,11 +210,11 @@ const RotateCcw = ({ size = 16, className, style }) => (
     const rawScreenPreview = "";
     const rawNodeDetail = "";
 
-    \${cleanCode(rawFlowSidebar)}
-    \${cleanCode(rawNodeDetail)}
-    \${cleanCode(rawScreenPreview)}
-    \${cleanCode(rawSwimlaneFlowChart)}
-    \${cleanCode(rawApp)}
+    ${cleanCode(rawFlowSidebar)}
+    ${cleanCode(rawNodeDetail)}
+    ${cleanCode(rawScreenPreview)}
+    ${cleanCode(rawSwimlaneFlowChart)}
+    ${cleanCode(rawApp)}
 
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
