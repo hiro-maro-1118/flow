@@ -41,7 +41,7 @@ export default function ScreenPreview({ activeNode, currentFlowId, currentFlowVe
 
   // 表示する画像（最新画像 または 履歴で選択された過去画像）
   const currentImage = selectedImageUrl || (activeNode ? activeNode.image : null);
-  const isViewingHistory = selectedImageUrl !== null && selectedImageUrl !== activeNode.image;
+  const isViewingHistory = selectedImageUrl !== null && selectedImageUrl !== activeNode?.image;
 
   // 過去履歴画像の復元（最新版に設定）
   const handleRestoreHistory = () => {
@@ -94,7 +94,7 @@ export default function ScreenPreview({ activeNode, currentFlowId, currentFlowVe
   // 現在表示されている画像のプルダウン用バリューを取得
   const getSelectValue = () => {
     if (selectedImageUrl === null) return "latest";
-    const history = activeNode.imageHistory || [];
+    const history = activeNode?.imageHistory || [];
     const idx = history.findIndex(h => h.url === selectedImageUrl);
     return idx !== -1 ? idx.toString() : "latest";
   };
