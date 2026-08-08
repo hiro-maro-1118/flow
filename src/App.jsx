@@ -13,12 +13,25 @@ import rawSwimlaneFlowChart from "./components/SwimlaneFlowChart.jsx?raw";
 import rawScreenPreview from "./components/ScreenPreview.jsx?raw";
 import rawNodeDetail from "./components/NodeDetail.jsx?raw";
 
+// ローカルストレージからの初期データ取得
+const getInitialFlows = () => {
+  try {
+    const saved = localStorage.getItem("flow_studio_data");
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error("Failed to load flows from localStorage", e);
+  }
+  return sampleFlows;
+};
+
 export default function App() {
-  const [flows, setFlows] = useState(sampleFlows);
+  const [flows, setFlows] = useState(getInitialFlows);
   
   // フローのバージョン管理
-  const [activeFlowId, setActiveFlowId] = useState(sampleFlows[0].id);
-  const [activeFlowVer, setActiveFlowVer] = useState(sampleFlows[0].ver || "1.0");
+  const [activeFlowId, setActiveFlowId] = useState(flows[0]?.id || sampleFlows[0].id);
+  const [activeFlowVer, setActiveFlowVer] = useState(flows[0]?.ver || sampleFlows[0].ver || "1.0");
   const [activeNode, setActiveNode] = useState(null);
 
   // リサイズ・開閉ステート
@@ -28,6 +41,15 @@ export default function App() {
   
   const [isResizingX, setIsResizingX] = useState(false);
   const [isResizingY, setIsResizingY] = useState(false);
+
+  // flows 状態の変更をローカルストレージに永続化
+  useEffect(() => {
+    try {
+      localStorage.setItem("flow_studio_data", JSON.stringify(flows));
+    } catch (e) {
+      console.error("Failed to save flows to localStorage", e);
+    }
+  }, [flows]);
 
   // ノードの画面イメージを更新するハンドラー (過去履歴スタック対応・バージョン独立)
   const handleUpdateNodeImage = (flowId, flowVer, nodeId, imageSrc) => {
@@ -40,14 +62,12 @@ export default function App() {
 
     setFlows((prevFlows) =>
       prevFlows.map((f) => {
-        // flowId かつ flowVer が一致するフローのみを更新対象にする
         if (f.id !== flowId || (f.ver || "1.0") !== (flowVer || "1.0")) return f;
         return {
           ...f,
           nodes: f.nodes.map((n) => {
             if (n.id !== nodeId) return n;
             const history = n.imageHistory || [];
-            // 現在の画面イメージがあれば履歴の先頭に退避する
             const updatedHistory = n.image 
               ? [{ url: n.image, date: dateStr + " に更新" }, ...history]
               : history;
@@ -80,7 +100,6 @@ export default function App() {
   const handleUpdateNodeFields = (flowId, flowVer, nodeId, fields) => {
     setFlows((prevFlows) =>
       prevFlows.map((f) => {
-        // flowId かつ flowVer が一致するフローのみを更新対象にする
         if (f.id !== flowId || (f.ver || "1.0") !== (flowVer || "1.0")) return f;
         return {
           ...f,
@@ -94,6 +113,22 @@ export default function App() {
     setActiveNode((prev) =>
       prev && prev.id === nodeId ? { ...prev, ...fields } : prev
     );
+  };
+
+  // 編集データをすべてリセットして初期状態に戻す
+  const handleResetData = () => {
+    if (window.confirm("これまでにアップロードした画像や編集したテキスト、メモ履歴をすべて消去し、最初の状態に戻しますか？")) {
+      try {
+        localStorage.removeItem("flow_studio_data");
+      } catch (e) {
+        console.error(e);
+      }
+      setFlows(sampleFlows);
+      setActiveNode(null);
+      // アクティブなバージョンを最初のフローに揃える
+      setActiveFlowId(sampleFlows[0].id);
+      setActiveFlowVer(sampleFlows[0].ver || "1.0");
+    }
   };
 
   // マウスドラッグによるペインサイズ変更処理
@@ -136,11 +171,9 @@ export default function App() {
   // フローおよびバージョンの切り替え
   const handleSelectFlow = (id, ver) => {
     setActiveFlowId(id);
-    // もし指定されたバージョンがあればそれに切り替える
     if (ver) {
       setActiveFlowVer(ver);
     } else {
-      // 指定がなければそのフローの最初のバージョンを選択
       const matched = flows.find((f) => f.id === id);
       setActiveFlowVer(matched?.ver || "1.0");
     }
@@ -389,6 +422,28 @@ const Check = ({ size = 16, className, style }) => (
           <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--accent-color)" }}>
             表示中: {currentFlow.title} {currentFlow.ver && `(Ver ${currentFlow.ver})`}
           </span>
+          <span style={{ color: "var(--border-color)" }}>|</span>
+          <button 
+            type="button" 
+            className="toggle-btn"
+            onClick={handleResetData}
+            title="編集内容を初期化して最初の状態に戻す"
+            style={{ 
+              backgroundColor: "transparent", 
+              color: "var(--text-muted)", 
+              border: "1px solid var(--border-color)",
+              padding: "4px 8px",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontSize: "0.65rem",
+              fontWeight: "600",
+              display: "flex",
+              alignItems: "center",
+              gap: "3px"
+            }}
+          >
+            データ初期化
+          </button>
           <span style={{ color: "var(--border-color)" }}>|</span>
           <span>データ・描画分離モデル (Sample 1.0)</span>
           <button 
