@@ -94,13 +94,40 @@ export default function App() {
   }, [flows, activeFlowId, activeFlowVer]);
 
   // ノードの画面イメージを更新するハンドラー (過去履歴スタック対応・バージョン独立)
-  const handleUpdateNodeImage = (flowId, flowVer, nodeId, imageSrc) => {
+  const handleUpdateNodeImage = async (flowId, flowVer, nodeId, imageSrc) => {
     const dateStr = new Date().toLocaleString("ja-JP", {
       month: "numeric",
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit"
     });
+
+    let finalImageSrc = imageSrc;
+
+    // ローカル開発環境なら、まず画像をサーバーへ物理ファイルとして保存し、パスを書き換える
+    const isLocalhost = typeof window !== 'undefined' && 
+                        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    if (isLocalhost && imageSrc.startsWith("data:")) {
+      try {
+        const response = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: `${flowId}_${nodeId}`,
+            fileData: imageSrc
+          })
+        });
+        if (!response.ok) throw new Error("Upload API error");
+        const resData = await response.json();
+        if (resData.success) {
+          finalImageSrc = resData.imagePath; // 例: "images/credit-card-flow_card-node-2_1786098282.png"
+          console.log(`[Vite Server] Physical image saved on server: ${finalImageSrc}`);
+        }
+      } catch (err) {
+        console.error("Failed to save physical image on server, fallback to base64:", err);
+      }
+    }
 
     setFlows((prevFlows) =>
       prevFlows.map((f) => {
@@ -115,7 +142,7 @@ export default function App() {
               : history;
             return {
               ...n,
-              image: imageSrc,
+              image: finalImageSrc,
               imageHistory: updatedHistory
             };
           })
@@ -132,7 +159,7 @@ export default function App() {
         : history;
       return {
         ...prev,
-        image: imageSrc,
+        image: finalImageSrc,
         imageHistory: updatedHistory
       };
     });
@@ -229,21 +256,48 @@ export default function App() {
   // HTMLのダウンロード処理
   const handleDownloadHTML = () => {
     // [DOWNLOAD_HTML_START]
-    const cleanCode = (code, isApp = false) => {
+    const isLocalhost = typeof window !== 'undefined' && 
+                        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    if (!isLocalhost) {
+      // ポータブルHTML単体での動作時：自分自身のHTMLを取得し、sampleFlows 部分を現在の flows 状態で書き換えて再保存する
+      try {
+        let docHtml = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+        
+        // HTML内の const sampleFlows = [ ... ]; 部分を最新の flows で置換する
+        const regex = /const\s+sampleFlows\s*=\s*\[[\s\S]*?\]\s*;/;
+        const serializedFlows = `const sampleFlows = ${JSON.stringify(flows, null, 2)};`;
+        
+        if (regex.test(docHtml)) {
+          docHtml = docHtml.replace(regex, serializedFlows);
+        } else {
+          alert("HTML構造の解析に失敗しました。最新のデータが完全に反映されていない可能性があります。");
+        }
+
+        const blob = new Blob([docHtml], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `flow-studio-${currentFlow.id || 'export'}-updated.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return;
+      } catch (e) {
+        console.error("Failed to generate updated portable HTML", e);
+        alert("ファイルの生成中にエラーが発生しました。");
+        return;
+      }
+    }
+
+    const cleanCode = (code) => {
       if (!code) return "";
       let cleaned = code
         .replace(/import\s+[\s\S]*?\s+from\s+['"].*?['"];?/g, '')
         .replace(/export\s+default\s+function/g, 'function')
         .replace(/export\s+default\s+/g, '')
         .trim();
-
-      if (isApp) {
-        // App.jsx の場合はポータブル版で不要かつ巨大なダウンロード処理を無害化する
-        cleaned = cleaned.replace(
-          /\/\/\s*\[DOWNLOAD_HTML_START\][\s\S]*?\/\/\s*\[DOWNLOAD_HTML_END\]/g,
-          'alert("このポータブルHTML版ではダウンロード機能は使用できません。");'
-        );
-      }
       return cleaned;
     };
 
@@ -426,7 +480,7 @@ const Check = ({ size = 16, className, style }) => (
     ${cleanCode(rawNodeDetail)}
     ${cleanCode(rawScreenPreview)}
     ${cleanCode(rawSwimlaneFlowChart)}
-    ${cleanCode(rawApp, true)}
+    ${cleanCode(rawApp)}
 
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
