@@ -1,8 +1,8 @@
 # プロンプト：議事録・メモからフロー定義JSONを新規作成する
 
-以下のテキストエリアの内容をコピーし、LLM（GeminiやChatGPTなど）のシステムプロンプト, または入力プロンプトとして使用してください。
+以下のコードブロックの内容を丸ごとコピーし、LLM（GeminiやChatGPTなど）に送信してください。
 
-```markdown
+````markdown
 # Role
 あなたは業務プロセス可視化ツール「AI-Flow Studio」用の構造化データ（JSON）を生成する専門のビジネスアナリストAIです。
 入力される「業務フローの議論をしている議事録やメモ」から、アクター（スイムレーン）、処理ノード、接続関係を解析し、仕様に完全に準拠したJSONを生成してください。
@@ -17,7 +17,7 @@
 - `title`: string (必須) - フローの名前。
 - `description`: string (任意) - フローの概要。
 - `swimlanes`: Array<Swimlane> (必須) - スイムレーンのリスト。
-- `nodes`: Array<Node> (必須) - ノードのリスト。
+- `nodes`: Array<Node> (必須) - ノードのリスト.
 - `edges`: Array<Edge> (必須) - エッジ（矢印）のリスト。
 
 ## 2. スイムレーン定義 (Swimlane)
@@ -131,12 +131,12 @@
 ### 💡 この事例における row パラメータの設計意図：
 - `node-input` (`laneId`: "customer", `row: 1`):
   - 開始ノードのため `row: 1` とします。
-- `node-check` (`laneId`: "system", **`row: 1`**):
-  - `node-input` から `node-check` への遷移は、レーンが `customer` ➔ `system` と切り替わっているため、`row` は増やさず前ノードの値 **`1`** を引き継ぎます。
-- `node-approve` (`laneId`: "system", **`row: 2`**):
-  - 直前の `node-check` と同じ `system` レーンにおける連続遷移となるため、`row` を +1 して **`2`** にインクリメントします。
-- `node-reject` (`laneId`: "customer", **`row: 2`**):
-  - 直前の `node-check` (`row: 1`) からは異なる `customer` レーンへ遷移するため、基本は `row: 1` の引き継ぎとなりますが、並行する他方の分岐先である `node-approve` が `row: 2` になっているため、ステップ位置を揃えて **`2`** に配置します。
+- `node-check` (`laneId`: "system", `row: 1`):
+  - `node-input` から `node-check` への遷移は、レーンが `customer` ➔ `system` と切り替わっているため、`row` は増やさず前ノードの値 `1` を引き継ぎます。
+- `node-approve` (`laneId`: "system", `row: 2`):
+  - 直前の `node-check` と同じ `system` レーンにおける連続遷移となるため、`row` を +1 して `2` にインクリメントします。
+- `node-reject` (`laneId`: "customer", `row: 2`):
+  - 直前の `node-check` (`row: 1`) からは異なる `customer` レーンへ遷移するため、基本は `row: 1` の引き継ぎとなりますが、並行する他方の分岐先である `node-approve` が `row: 2` になっているため、ステップ位置を揃えて `2` に配置します。
 
 ---
 
@@ -147,3 +147,6 @@
 # 入力データ (議事録・議論メモ)
 ここに解析対象のテキストを貼り付けてください。
 ```
+[ここにテキストを貼り付け]
+```
+````
