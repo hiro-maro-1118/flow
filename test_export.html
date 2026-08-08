@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Flow Studio | 業務フロー描画ポータブル</title>
+  <style>
+    :root {
+  /* 明るいコンサルティング資料風デザインシステムトークン */
+  --bg-primary: #f8fafc;     /* 全体のメイン背景: 極薄のブルーグレー */
+  --bg-secondary: #ffffff;   /* パネル、サイドバー、ヘッダー背景: 白 */
+  --bg-tertiary: #f1f5f9;    /* ボタン、リストのホバー背景: 薄いグレー */
+  
+  --border-color: #cbd5e1;   /* 境界線: 精密で薄いグレー */
+  --border-active: #1e3a8a;  /* アクティブ境界線: 濃紺 */
+  
+  --text-primary: #0f172a;   /* 墨黒: タイトルや主要テキスト */
+  --text-secondary: #334155; /* 濃グレー: 説明文など */
+  --text-muted: #64748b;     /* ミディアムグレー: メタデータや補助テキスト */
+  
+  --accent-color: #2563eb;   /* ロイヤルブルー */
+  --accent-glow: rgba(37, 99, 235, 0.15);
+  --danger-color: #dc2626;   /* レッド（差し戻し用） */
+  --danger-glow: rgba(220, 38, 38, 0.08);
+  --success-color: #16a34a;  /* グリーン */
+  --success-glow: rgba(22, 163, 74, 0.08);
+  
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow: hidden;
+  height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
+}
+
+/* スクロールバーのカスタマイズ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* メインレイアウト */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--bg-primary);
+}
+
+/* ヘッダー */
+.app-header {
+  height: 50px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 15;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+}
+
+.header-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+/* 2ペインメインレイアウト */
+.main-content-2pane {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 50px);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+/* 左ペイン: フローリスト */
+.left-pane {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 5;
+}
+
+/* 右ペイン */
+.right-dashboard-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  position: relative;
+  z-index: 1;
+}
+
+/* 右上: 業務フロー描画エリア */
+.right-dashboard-pane > div:first-child > .center-pane {
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* 右下: 左右2分割エリア */
+.bottom-detail-split {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--bg-secondary);
+  position: relative;
+  z-index: 5;
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
+}
+
+/* 右下・左側: 画面プレビュー */
+.bottom-detail-split > .right-pane-top {
+  width: 50%;
+  height: 100%;
+  border-bottom: none;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 右下・右側: 詳細説明 */
+.bottom-detail-split > .right-pane-bottom {
+  width: 50%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ペインヘッダー */
+.pane-header {
+  padding: 10px 16px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ドラッガブルスプリッター */
+.splitter-x {
+  width: 6px;
+  background-color: var(--border-color);
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+  z-index: 8;
+  position: relative;
+}
+
+.splitter-x:hover, .splitter-x.active {
+  background-color: var(--accent-color);
+}
+
+.splitter-y {
+  height: 6px;
+  background-color: var(--border-color);
+  cursor: row-resize;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+  z-index: 8;
+  position: relative;
+}
+
+.splitter-y:hover, .splitter-y.active {
+  background-color: var(--accent-color);
+}
+
+/* 下ペイン折りたたみトグルボタン */
+.toggle-btn {
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toggle-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+/* 左ペイン: フローリスト */
+.flow-list-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.flow-item {
+  padding: 12px;
+  border-radius: 0px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 8px;
+}
+
+.flow-item:hover {
+  border-color: var(--accent-color);
+  background: var(--bg-tertiary);
+}
+
+.flow-item.active {
+  border-color: var(--accent-color);
+  border-left: 4px solid var(--accent-color);
+  background: var(--bg-tertiary);
+}
+
+.flow-item-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 3px;
+  color: var(--text-primary);
+}
+
+.flow-item-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+/* スイムレーンフローチャート (コンサル作図スタイル) */
+.center-pane {
+  background-color: var(--bg-primary);
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ヘッダーのtransform外に独立した描画エリア */
+.canvas-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.canvas-area.grabbing {
+  cursor: grabbing;
+}
+
+.canvas-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 100px 40px 60px 40px; /* 上部を100pxに増加→戻り矢印の弧が必ずパディング内に収まる */
+  background-color: var(--bg-primary);
+  transform-origin: 0 0;
+}
+
+/* 横書きスイムレーン用のCSSグリッド配置 */
+.swimlanes-flow-grid {
+  display: grid;
+  column-gap: 25px;
+  row-gap: 16px; /* ホバー表示により余白を縮小 */
+  position: relative;
+}
+
+/* スイムレーンヘッダー */
+.lane-header-card-y {
+  grid-column: 1;
+  grid-row: var(--row-start);
+  padding: 8px;
+  border-radius: 0px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.68rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--lane-color);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+  width: 120px;
+  height: 100%;
+  z-index: 4;
+}
+
+/* スイムレーン背景ガイドライン */
+.grid-bg-lanes-y {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  row-gap: 16px; /* swimlanes-flow-grid と統一 */
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-lane-row {
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  grid-column: 1 / -1;
+  height: 100%;
+}
+
+.bg-lane-row:nth-child(even) {
+  background: #fcfdfd;
+}
+
+/* フローノード（ボックス）のスタイル */
+.flow-node {
+  grid-column: var(--col-start) / span 1;
+  grid-row: var(--row-start) / span 1;
+  width: 100%;
+  max-width: 125px;
+  justify-self: center;
+  align-self: center;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-left: 3.5px solid var(--lane-color);
+  border-radius: 0px;
+  padding: 5px 8px;
+  min-height: 42px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s, box-shadow 0.15s;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.flow-node:hover {
+  transform: translateY(-2px);
+  border-color: #94a3b8;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.flow-node.active {
+  border-color: var(--text-primary);
+  border-width: 1.5px;
+  border-left-width: 4px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  background: #fcfcfc;
+}
+
+.flow-node-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+  padding-right: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ひし形（判断分岐）ノードの特別スタイル - SVGベースの描画のため、コンテナボックスは最小限の内包 */
+.flow-node.decision {
+  width: 60px;
+  height: 60px;
+  min-height: 60px;
+  max-width: 60px;
+  background: transparent;
+  border: none;
+  border-left: none;
+  padding: 0;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible; /* SVGのpolygonがこのボックス内に収まる */
+}
+
+.flow-node.decision:hover {
+  transform: rotate(45deg) translate(-1px, -1px); /* 斜め上に浮くように微調整 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.flow-node.decision.active {
+  border-color: var(--text-primary);
+  border-width: 1.5px;
+  border-left-width: 4px;
+}
+
+/* ひし形の内部コンテナ: テキストを逆回転させて水平に戻す */
+.decision-inner {
+  transform: rotate(-45deg);
+  width: 78px; /* はみ出しを防ぐ適切な幅 */
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  pointer-events: none;
+}
+
+.flow-node.decision .flow-node-title {
+  font-size: 0.64rem;
+  line-height: 1.15;
+  font-weight: 700;
+  padding-right: 0; /* ひし形内ではアイコンを表示しないためパディング不要 */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-align: center;
+}
+
+/* メタアイコンの絶対配置ラッパー */
+.node-icon-wrapper {
+  position: absolute;
+  right: 5px;
+  bottom: 4px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.node-icon-indicator {
+  color: var(--lane-color);
+  opacity: 0.8;
+}
+
+/* SVGコネクタレイヤーを最前面(z-index: 3)にして、矢印の文字がボックスで絶対に隠れないようにする */
+.connector-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* エッジ（矢印接続線）インタラクティブホバーエフェクト */
+.edge-group {
+  cursor: pointer;
+  pointer-events: stroke !important; /* 親SVGの pointer-events: none を上書きして線上のみホバーを有効化 */
+}
+
+/* 通常時: 遷移ラベルは完全に透明 */
+.edge-group text {
+  opacity: 0;
+  transition: opacity 0.15s ease-in-out;
+  pointer-events: none; /* テキスト自体はホバー判定を阻害しない */
+}
+
+/* 通常時: 接続パスの実線 */
+.edge-group path:nth-child(2) {
+  transition: stroke 0.15s, stroke-width 0.15s;
+}
+
+/* ホバー時: ラベルを表示し、接続線をロイヤルブルーで強調ハイライトする */
+.edge-group:hover text {
+  opacity: 1;
+}
+
+.edge-group:hover path:nth-child(2) {
+  stroke-width: 2.2px !important; /* 実線を少し太く */
+  stroke: var(--accent-color) !important; /* ロイヤルブルー */
+  filter: drop-shadow(0 0 2px var(--accent-glow));
+}
+
+/* 差し戻し線（赤破線）がホバーされたときは赤く強調する */
+.edge-group:hover path[stroke="var(--danger-color)"] {
+  stroke: #b91c1c !important; /* より濃い赤 */
+  filter: drop-shadow(0 0 2px var(--danger-glow));
+}
+
+.edge-group:hover text[fill="var(--danger-color)"] {
+  fill: #b91c1c !important;
+}
+
+/* 右下・画面プレビューコンテナ */
+.preview-container {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.browser-mockup {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.browser-bar {
+  height: 28px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+
+.browser-dots-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.browser-address {
+  flex: 1;
+  height: 16px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  margin: 0 15px;
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding-left: 6px;
+  max-width: 40%;
+}
+
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoom-btn {
+  padding: 1px 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.zoom-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.zoom-text {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  min-width: 32px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.browser-content {
+  flex: 1;
+  overflow: auto;
+  background-color: #f1f5f9;
+  position: relative;
+  display: block;
+  text-align: center;
+}
+
+.preview-image-scrollable {
+  display: inline-block;
+  vertical-align: top;
+  margin: 10px auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+}
+
+/* 右下・詳細説明コンテナ */
+.detail-container {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+.detail-header {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+
+.detail-lane-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 0px;
+  color: white;
+  margin-bottom: 4px;
+}
+
+.detail-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.detail-section {
+  margin-bottom: 12px;
+}
+
+.detail-section-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+  border-left: 2px solid var(--text-muted);
+  padding-left: 6px;
+}
+
+.detail-body {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.detail-meta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  padding: 8px;
+  border-radius: 0px;
+  border: 1px solid var(--border-color);
+}
+
+.detail-meta-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+}
+
+.detail-meta-label {
+  color: var(--text-muted);
+}
+
+.detail-meta-val {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useRef, useLayoutEffect, useEffect, useCallback } = React;
+
+    
+const Monitor = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect width="20" height="14" x="2" y="2" rx="2" />
+    <line x1="8" x2="16" y1="21" y2="21" />
+    <line x1="12" x2="12" y1="17" y2="21" />
+  </svg>
+);
+
+const Workflow = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect width="8" height="8" x="3" y="3" rx="2" />
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" />
+    <rect width="8" height="8" x="13" y="13" rx="2" />
+  </svg>
+);
+
+const Info = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </svg>
+);
+
+const HelpCircle = ({ size = 16, className, style, strokeWidth = 2 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <path d="M12 17h.01" />
+  </svg>
+);
+
+const ImageIcon = ({ size = 16, className, style, strokeWidth = 2 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+  </svg>
+);
+
+const ZoomIn = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+    <line x1="11" x2="11" y1="8" y2="14" />
+    <line x1="8" x2="14" y1="11" y2="11" />
+  </svg>
+);
+
+const ZoomOut = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+    <line x1="8" x2="14" y1="11" y2="11" />
+  </svg>
+);
+
+const RotateCcw = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <polyline points="3 3 3 8 8 8" />
+  </svg>
+);
+
+
+    const sampleFlows = [];
+
+    // ダミーのポータブル用変数定義（未定義エラー防止）
+    const rawCss = "";
+    const rawApp = "";
+    const rawFlowSidebar = "";
+    const rawSwimlaneFlowChart = "";
+    const rawScreenPreview = "";
+    const rawNodeDetail = "";
+
+    function FlowSidebar({
+  flows,
+  activeFlowId,
+  onSelectFlow
+}) {
+  return (
+    <div className="left-pane">
+      <div className="pane-header">
+        <span>業務フロー一覧</span>
+        <Workflow size={16} />
+      </div>
+
+      <div className="flow-list-container">
+        {flows.map((flow) => (
+          <div
+            key={flow.id}
+            className={`flow-item ${flow.id === activeFlowId ? "active" : ""}`}
+            onClick={() => onSelectFlow(flow.id)}
+          >
+            <div className="flow-item-title">
+              {flow.title}
+            </div>
+            <div className="flow-item-desc">{flow.description}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+    function NodeDetail({ activeNode, swimlanes = [] }) {
+  // 所属するスイムレーンの情報を探す
+  const lane = activeNode
+    ? swimlanes.find((l) => l.id === activeNode.laneId)
+    : null;
+
+  return (
+    <div className="right-pane-bottom">
+      <div className="pane-header">
+        <span>ステップ詳細説明</span>
+        <Info size={16} />
+      </div>
+
+      <div className="detail-container">
+        {activeNode ? (
+          <div>
+            <div className="detail-header">
+              {lane && (
+                <span
+                  className="detail-lane-tag"
+                  style={{
+                    backgroundColor: lane.color || "var(--accent-color)",
+                    boxShadow: `0 2px 8px ${lane.color}33`
+                  }}
+                >
+                  {lane.name}
+                </span>
+              )}
+              <h2 className="detail-title">{activeNode.title}</h2>
+            </div>
+
+            <div className="detail-section">
+              <h3 className="detail-section-title">概要</h3>
+              <p className="detail-body">{activeNode.description}</p>
+            </div>
+
+            {activeNode.details && (
+              <div className="detail-section">
+                <h3 className="detail-section-title">詳細手順・仕様</h3>
+                <p className="detail-body" style={{ whiteSpace: "pre-line" }}>
+                  {activeNode.details}
+                </p>
+              </div>
+            )}
+
+            <div className="detail-section">
+              <h3 className="detail-section-title">ステップメタデータ</h3>
+              <div className="detail-meta-list">
+                <div className="detail-meta-item">
+                  <span className="detail-meta-label">ステップID</span>
+                  <span className="detail-meta-val">{activeNode.id}</span>
+                </div>
+                <div className="detail-meta-item">
+                  <span className="detail-meta-label">担当レーン</span>
+                  <span className="detail-meta-val">{lane ? lane.name : "未定"}</span>
+                </div>
+                <div className="detail-meta-item">
+                  <span className="detail-meta-label">画面連携</span>
+                  <span className="detail-meta-val">
+                    {activeNode.image ? "あり" : "なし"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="placeholder-box"
+            style={{ margin: "40px auto 0", height: "auto" }}
+          >
+            <HelpCircle size={40} strokeWidth={1} />
+            <div className="placeholder-text">
+              業務フロー内のいずれかのボックスをクリックすると、そのステップの詳細な業務マニュアルやシステム仕様がここに表示されます。
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+    function ScreenPreview({ activeNode }) {
+  const [zoom, setZoom] = useState(100);
+  const hasImage = activeNode && activeNode.image;
+
+  // ノードが切り替わったときにズームを100%にリセット
+  useEffect(() => {
+    setZoom(100);
+  }, [activeNode?.id]);
+
+  const handleZoomIn = () => {
+    setZoom((z) => Math.min(z + 25, 300));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((z) => Math.max(z - 25, 50));
+  };
+
+  const handleReset = () => {
+    setZoom(100);
+  };
+
+  return (
+    <div className="right-pane-top">
+      <div className="pane-header">
+        <span>画面プレビュー</span>
+        
+        {/* ズームコントロール */}
+        {hasImage && (
+          <div className="zoom-controls">
+            <button 
+              type="button"
+              className="zoom-btn" 
+              onClick={handleZoomOut} 
+              title="ズームアウト"
+            >
+              <ZoomOut size={12} />
+            </button>
+            <span className="zoom-text">{zoom}%</span>
+            <button 
+              type="button" 
+              className="zoom-btn" 
+              onClick={handleZoomIn} 
+              title="ズームイン"
+            >
+              <ZoomIn size={12} />
+            </button>
+            <button 
+              type="button" 
+              className="zoom-btn" 
+              onClick={handleReset} 
+              title="リセット"
+              style={{ marginLeft: '4px' }}
+            >
+              <RotateCcw size={10} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="preview-container">
+        {hasImage ? (
+          <div className="browser-mockup">
+            <div className="browser-bar">
+              <div className="browser-dots-left">
+                <div className="browser-dot red"></div>
+                <div className="browser-dot yellow"></div>
+                <div className="browser-dot green"></div>
+              </div>
+              <div className="browser-address">
+                https://system.internal/{activeNode.image.split('/').pop()}
+              </div>
+              <div style={{ width: '60px' }}></div> {/* 左右バランス用 */}
+            </div>
+            
+            <div className="browser-content">
+              <img
+                src={activeNode.image}
+                alt={activeNode.title}
+                className="preview-image-scrollable"
+                style={{
+                  width: `${zoom}%`,
+                  maxWidth: 'none', // 100%制限を解除して拡大
+                  height: 'auto',
+                  transition: 'width 0.15s ease-out'
+                }}
+                onError={(e) => {
+                  console.error("Image load failed, fallback used", e);
+                  e.target.src = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80";
+                }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="placeholder-box">
+            <ImageIcon size={40} strokeWidth={1.5} />
+            <div className="placeholder-text">
+              {activeNode ? (
+                <>
+                  <strong>{activeNode.title}</strong> には画面イメージが紐づいていません。
+                  <br />
+                  <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "4px", display: "block" }}>
+                    ※「画面 UI」レーンのボックスをクリックすると、ここに画面イメージが表示されます。
+                  </span>
+                </>
+              ) : (
+                "スイムレーンの「画面 UI」レーンにあるボックスをクリックすると、対応する操作画面のイメージがここに表示されます。"
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+    function SwimlaneFlowChart({
+  flow,
+  activeNodeId,
+  onSelectNode,
+  isBottomOpen,
+  onToggleBottom
+}) {
+  const { swimlanes = [], nodes = [], edges = [] } = flow || {};
+  const [nodePositions, setNodePositions] = useState({});
+
+  // パン移動・ズーム
+  const [pan, setPan] = useState({ x: 20, y: 20 });
+  const [zoom, setZoom] = useState(1.0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+
+  const gridRef = useRef(null);
+  const canvasAreaRef = useRef(null); // ← ヘッダー下の描画エリア専用 ref
+  const nodeRefs = useRef({});
+
+  // 最大のcolumn数 (ステップ列数)
+  const maxCol = nodes.reduce((max, node) => Math.max(max, node.row || 1), 1);
+
+  // スイムレーンのマップ (ID -> インデックス)
+  const laneMap = {};
+  swimlanes.forEach((lane, idx) => {
+    laneMap[lane.id] = idx;
+  });
+
+  // 判断分岐ノードかどうかの判定ヘルパー
+  const isDecisionNode = (node) =>
+    node.type === "decision" || node.title.includes("判断分岐");
+
+  // フローが切り替わったときにパン・ズームをリセット
+  useEffect(() => {
+    setPan({ x: 20, y: 20 });
+    setZoom(1.0);
+  }, [flow?.id]);
+
+  // ノード要素の参照を格納するマップを更新する関数
+  const setNodeRef = (id, el) => {
+    if (el) {
+      nodeRefs.current[id] = el;
+    } else {
+      delete nodeRefs.current[id];
+    }
+  };
+
+  // 各ノードのグリッド相対座標を計算する関数 (offsetLeft/offsetTop ベース)
+  const updatePositions = () => {
+    if (!gridRef.current) return;
+
+    const positions = {};
+    nodes.forEach((node) => {
+      const el = nodeRefs.current[node.id];
+      if (el) {
+        const x = el.offsetLeft;
+        const y = el.offsetTop;
+        const w = el.offsetWidth;
+        const h = el.offsetHeight;
+
+        positions[node.id] = {
+          x,
+          y,
+          width: w,
+          height: h,
+          top: { x: x + w / 2, y: y },
+          bottom: { x: x + w / 2, y: y + h },
+          left: { x: x, y: y + h / 2 },
+          right: { x: x + w, y: y + h / 2 }
+        };
+      }
+    });
+
+    setNodePositions(positions);
+  };
+
+  useLayoutEffect(() => {
+    const timer = setTimeout(() => updatePositions(), 50);
+    const observer = new ResizeObserver(() => updatePositions());
+    if (gridRef.current) observer.observe(gridRef.current);
+    return () => { clearTimeout(timer); observer.disconnect(); };
+  }, [flow, nodes.length, isBottomOpen]);
+
+  // ---- マウスドラッグ（パン） ----
+  const handleMouseDown = (e) => {
+    if (e.target.closest(".flow-node") || e.target.closest(".toggle-btn") || e.target.closest(".zoom-btn")) return;
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    setPan({ x: e.clientX - dragStart.current.x, y: e.clientY - dragStart.current.y });
+  };
+
+  const handleMouseUpOrLeave = () => setIsDragging(false);
+
+  // ---- マウスホイール（ズーム） ----
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    const scaleDelta = e.deltaY < 0 ? 1.12 : 0.89;
+    setZoom((prevZoom) => {
+      const newZoom = Math.max(0.25, Math.min(3.0, prevZoom * scaleDelta));
+      // カーソル位置を中心にズーム
+      const rect = canvasAreaRef.current?.getBoundingClientRect();
+      if (!rect) return newZoom;
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      setPan((prevPan) => ({
+        x: mouseX - (mouseX - prevPan.x) * (newZoom / prevZoom),
+        y: mouseY - (mouseY - prevPan.y) * (newZoom / prevZoom)
+      }));
+      return newZoom;
+    });
+  }, []);
+
+  // passive: false で wheel イベントを登録（preventDefault のため）
+  useEffect(() => {
+    const el = canvasAreaRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
+
+  // ---- エッジ接続点の決定 (IN/OUT を役割で固定) ----
+  const getEdgePoints = (edge) => {
+    const fromNode = nodes.find((n) => n.id === edge.from);
+    const toNode = nodes.find((n) => n.id === edge.to);
+    if (!fromNode || !toNode) return null;
+
+    const fromPos = nodePositions[edge.from];
+    const toPos = nodePositions[edge.to];
+    if (!fromPos || !toPos) return null;
+
+    const fromIsDiamond = isDecisionNode(fromNode);
+    const toIsDiamond = isDecisionNode(toNode);
+
+    const isReturn = edge.isReturn;
+
+    // 戻り矢印のポート設計:
+    // - 通常ノード from: rightポートから出発 → IN(上からアクセスするエッジが top を使うのとポートを分ける)
+    // - ひし形ノード from: top頂点から出発
+    if (isReturn || fromNode.row > toNode.row) {
+      if (fromIsDiamond) {
+        return {
+          start: fromPos.top,
+          end: toPos.top,
+          type: "return",
+          fromNode, toNode, fromPos, toPos
+        };
+      } else {
+        // 通常ノード: rightポートから出発して先端のtopに届く弧
+        return {
+          start: fromPos.right,
+          end: toIsDiamond ? toPos.left : toPos.top,
+          type: "return-right",
+          fromNode, toNode, fromPos, toPos
+        };
+      }
+    }
+
+    // 中心点間ベクトル
+    const fromCX = fromPos.x + fromPos.width / 2;
+    const fromCY = fromPos.y + fromPos.height / 2;
+    const toCX = toPos.x + toPos.width / 2;
+    const toCY = toPos.y + toPos.height / 2;
+    const dx = toCX - fromCX;
+    const dy = toCY - fromCY;
+
+    // ---- ひし形ノードからの OUT: 方向によって頂点を分ける ----
+    if (fromIsDiamond) {
+      let startPort;
+      if (Math.abs(dy) <= Math.abs(dx) * 0.6 && dx > 0) {
+        // ほぼ水平右向き → 右頂点
+        startPort = fromPos.right;
+      } else if (dy > 0) {
+        // 下向き → 下頂点
+        startPort = fromPos.bottom;
+      } else {
+        // 上向き → 上頂点
+        startPort = fromPos.top;
+      }
+
+      // IN側: 通常ノードの場合は方向に応じた最短ポート
+      let endPort;
+      if (toIsDiamond) {
+        endPort = dx > 0 ? toPos.left : toPos.right;
+      } else {
+        endPort = Math.abs(dy) < 40 ? toPos.left : (dy > 0 ? toPos.top : toPos.bottom);
+      }
+
+      const type = Math.abs(dy) < 40 ? "horizontal"
+        : (Math.abs(dx) < 40 ? "vertical" : "diagonal-vertical");
+
+      return { start: startPort, end: endPort, type, fromNode, toNode, fromPos, toPos };
+    }
+
+    // ---- ひし形ノードへの IN: 常に左頂点に接続 ----
+    if (toIsDiamond) {
+      const endPort = toPos.left;
+      const startPort = fromPos.right;
+      return { start: startPort, end: endPort, type: "horizontal", fromNode, toNode, fromPos, toPos };
+    }
+
+    // ---- 通常ノード同士の接続 ----
+    if (Math.abs(dy) < 40 && dx > 0) {
+      return { start: fromPos.right, end: toPos.left, type: "horizontal", fromNode, toNode, fromPos, toPos };
+    }
+    if (Math.abs(dx) < 40) {
+      return {
+        start: dy > 0 ? fromPos.bottom : fromPos.top,
+        end: dy > 0 ? toPos.top : toPos.bottom,
+        type: "vertical", fromNode, toNode, fromPos, toPos
+      };
+    }
+    if (dx > 0) {
+      if (Math.abs(dy) > dx * 0.7) {
+        return {
+          start: dy > 0 ? fromPos.bottom : fromPos.top,
+          end: dy > 0 ? toPos.top : toPos.bottom,
+          type: "diagonal-vertical", fromNode, toNode, fromPos, toPos
+        };
+      }
+      return { start: fromPos.right, end: toPos.left, type: "diagonal-horizontal", fromNode, toNode, fromPos, toPos };
+    }
+    return { start: fromPos.right, end: toPos.left, type: "horizontal", fromNode, toNode, fromPos, toPos };
+  };
+
+  // ---- パス生成 ----
+  const generatePath = (edge) => {
+    const points = getEdgePoints(edge);
+    if (!points) return "";
+    const { start, end, type } = points;
+
+    if (type === "horizontal" || type === "diagonal-horizontal") {
+      const sx = start.x + 2, ex = end.x - 6;
+      const mx = sx + (ex - sx) / 2;
+      return `M ${sx} ${start.y} C ${mx} ${start.y}, ${mx} ${end.y}, ${ex} ${end.y}`;
+    }
+    if (type === "vertical" || type === "diagonal-vertical") {
+      const dir = start.y < end.y ? 1 : -1;
+      const sy = start.y + dir * 2, ey = end.y - dir * 6;
+      const my = sy + (ey - sy) / 2;
+      return `M ${start.x} ${sy} C ${start.x} ${my}, ${end.x} ${my}, ${end.x} ${ey}`;
+    }
+    if (type === "return") {
+      // ひし形ノードからの戻り: top → top
+      const sy = start.y - 2, ey = end.y - 8;
+      const diffX = Math.abs(start.x - end.x);
+      const archH = Math.max(40, Math.min(80, diffX * 0.2));
+      return `M ${start.x} ${sy} C ${start.x} ${sy - archH}, ${end.x} ${ey - archH}, ${end.x} ${ey}`;
+    }
+    if (type === "return-right") {
+      // 通常ノードからの戻り: right ポートから出て 届き先 top または left に到着
+      const sx = start.x, sy = start.y;
+      const ex = end.x, ey = end.y - 8;
+      // 弧の高さ: 横方向の距離に応じて自動調整
+      const diffX = Math.abs(sx - ex);
+      const diffY = Math.abs(sy - ey);
+      const archH = Math.max(40, Math.min(90, diffX * 0.15 + diffY * 0.1));
+      // CP1: 右側へ少しだけ还れてから上へ上昇
+      const cp1x = sx + Math.min(40, diffX * 0.15 + 15);
+      const cp1y = sy - archH;
+      // CP2: 先端の上方から入横
+      const cp2x = ex;
+      const cp2y = ey - archH;
+      return `M ${sx} ${sy} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${ex} ${ey}`;
+    }
+    return "";
+  };
+
+  const ROW_H = 52;
+  const ROW_GAP = 16;
+  const gridCols = `130px repeat(${maxCol}, minmax(160px, 1fr))`;
+  const gridRows = `repeat(${swimlanes.length}, minmax(${ROW_H}px, auto))`;
+
+  return (
+    <div className="center-pane" style={{ display: "flex", flexDirection: "column" }}>
+      {/* ── ヘッダー: transformの外に配置してドラッグしても消えないようにする ── */}
+      <div className="pane-header" style={{ flexShrink: 0, zIndex: 10 }}>
+        <span>業務フロー描画（横書きスイムレーン図）&nbsp;
+          <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 400 }}>
+            ドラッグ: パン移動 ｜ ホイール: 拡大縮小 ｜ エッジをホバー: 遷移条件表示
+          </span>
+        </span>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          {/* ズームリセットボタン */}
+          <button
+            type="button"
+            className="toggle-btn zoom-btn"
+            onClick={() => { setZoom(1.0); setPan({ x: 20, y: 20 }); }}
+          >
+            リセット
+          </button>
+          <span className="zoom-text">{Math.round(zoom * 100)}%</span>
+          <button type="button" className="toggle-btn" onClick={onToggleBottom}>
+            {isBottomOpen ? "詳細表示を閉じる ▲" : "詳細表示を開く ▼"}
+          </button>
+        </div>
+      </div>
+
+      {/* ── キャンバスエリア: position:relative, overflow:hidden で独立した描画領域 ── */}
+      <div
+        ref={canvasAreaRef}
+        className={isDragging ? "canvas-area grabbing" : "canvas-area"}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+      >
+        {/* transform はこの div だけに適用 → ヘッダーに影響しない */}
+        <div
+          className="canvas-wrapper"
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: "0 0",
+            width: `${(maxCol + 1) * 180 + 100}px`,
+            height: `${swimlanes.length * (ROW_H + ROW_GAP) + 200}px`  /* 上100px+下60px+余裕分 */
+          }}
+        >
+          <div
+            ref={gridRef}
+            className="swimlanes-flow-grid"
+            style={{
+              gridTemplateColumns: gridCols,
+              gridTemplateRows: gridRows,
+              rowGap: `${ROW_GAP}px`,
+              columnGap: "25px"
+            }}
+          >
+            {/* 背景レーンガイドライン */}
+            <div
+              className="grid-bg-lanes-y"
+              style={{ gridTemplateRows: gridRows, rowGap: `${ROW_GAP}px` }}
+            >
+              {swimlanes.map((lane) => (
+                <div key={lane.id} className="bg-lane-row" />
+              ))}
+            </div>
+
+            {/* スイムレーンヘッダー */}
+            {swimlanes.map((lane, idx) => (
+              <div
+                key={lane.id}
+                className="lane-header-card-y"
+                style={{ "--row-start": idx + 1, "--lane-color": lane.color }}
+              >
+                {lane.name}
+              </div>
+            ))}
+
+            {/* ノード描画 */}
+            {nodes.map((node) => {
+              const laneIndex = laneMap[node.laneId] !== undefined ? laneMap[node.laneId] : 0;
+              const lane = swimlanes[laneIndex] || {};
+              const isActive = node.id === activeNodeId;
+              const isDiamond = isDecisionNode(node);
+
+              const hasSlot = node.slot !== undefined;
+              const slotStyle = hasSlot
+                ? { justifySelf: node.slot === 0 ? "start" : "end" }
+                : {};
+
+              return (
+                <div
+                  key={node.id}
+                  ref={(el) => setNodeRef(node.id, el)}
+                  className={`flow-node ${isActive ? "active" : ""} ${isDiamond ? "decision" : ""}`}
+                  style={{
+                    "--col-start": node.row + 1,
+                    "--row-start": laneIndex + 1,
+                    "--lane-color": lane.color || "#2563eb",
+                    ...slotStyle
+                  }}
+                  onClick={() => onSelectNode(node)}
+                >
+                  {isDiamond ? (
+                    <DecisionDiamond node={node} lane={lane} isActive={isActive} />
+                  ) : (
+                    <>
+                      <div className="flow-node-title">{node.title}</div>
+                      {lane.isImageLane && node.image && (
+                        <div className="node-icon-wrapper">
+                          <Monitor size={11} className="node-icon-indicator" style={{ "--lane-color": lane.color }} />
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* SVGコネクタ */}
+            <svg
+              className="connector-layer"
+              style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 3, overflow: "visible" }}
+            >
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--text-muted)" />
+                </marker>
+                <marker id="arrow-return" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                  <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="var(--danger-color)" />
+                </marker>
+              </defs>
+
+              {edges.map((edge, index) => {
+                const pathD = generatePath(edge);
+                if (!pathD) return null;
+                const points = getEdgePoints(edge);
+                if (!points) return null;
+                const { start, end, type } = points;
+                const isReturn = edge.isReturn || points.fromNode.row > points.toNode.row || type === "return-right";
+
+                let labelX, labelY, textAnchor = "middle";
+                if (type === "horizontal" || type === "diagonal-horizontal") {
+                  labelX = (start.x + end.x) / 2;
+                  labelY = (start.y + end.y) / 2 - 7;
+                } else if (type === "return") {
+                  const diffX = Math.abs(start.x - end.x);
+                  const archH = Math.max(40, Math.min(80, diffX * 0.2));
+                  labelX = (start.x + end.x) / 2;
+                  labelY = (start.y + end.y) / 2 - archH + 10;
+                } else if (type === "return-right") {
+                  // 弧の中間あたり（右上に膨らむ）にラベルを配置
+                  labelX = (start.x + end.x) / 2 + 12;
+                  labelY = Math.min(start.y, end.y) - 18;
+                  textAnchor = "middle";
+                } else {
+                  labelX = (start.x + end.x) / 2 + 6;
+                  labelY = (start.y + end.y) / 2;
+                  textAnchor = "start";
+                }
+
+                return (
+                  <g key={`${edge.from}-${edge.to}-${index}`} className="edge-group">
+                    <path d={pathD} fill="none" stroke="transparent" strokeWidth={10} style={{ pointerEvents: "stroke" }} />
+                    <path
+                      d={pathD} fill="none"
+                      stroke={isReturn ? "var(--danger-color)" : "var(--text-muted)"}
+                      strokeWidth={1.2}
+                      strokeDasharray={isReturn ? "4,4" : "none"}
+                      markerEnd={`url(#${isReturn ? "arrow-return" : "arrow"})`}
+                    />
+                    {edge.label && (
+                      <text x={labelX} y={labelY}
+                        fill={isReturn ? "var(--danger-color)" : "var(--text-secondary)"}
+                        fontSize="8.5px" fontWeight="600" textAnchor={textAnchor}
+                        style={{ paintOrder: "stroke", stroke: "var(--bg-primary)", strokeWidth: "3px", strokeLinejoin: "round" }}
+                      >
+                        {edge.label}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// SVGベースのひし形（判断分岐）ノード
+function DecisionDiamond({ node, lane, isActive }) {
+  const SIZE = 56;
+  const HALF = SIZE / 2;
+  const title = node.title
+    .replace("【判断分岐】", "").replace("判断分岐：", "").replace("判断分岐:", "").trim();
+  const borderColor = isActive ? "var(--text-primary)" : (lane.color || "#64748b");
+  const borderWidth = isActive ? 2 : 1.5;
+
+  return (
+    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ overflow: "visible", display: "block", margin: "auto" }}>
+      <polygon
+        points={`${HALF},1 ${SIZE - 1},${HALF} ${HALF},${SIZE - 1} 1,${HALF}`}
+        fill="white"
+        stroke={borderColor}
+        strokeWidth={borderWidth}
+      />
+      <foreignObject x={6} y={HALF - 16} width={SIZE - 12} height={32} style={{ overflow: "visible" }}>
+        <div
+          xmlns="http://www.w3.org/1999/xhtml"
+          style={{
+            width: "100%", height: "100%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            textAlign: "center", fontSize: "0.58rem", fontWeight: 700,
+            lineHeight: 1.15, color: "var(--text-primary)", wordBreak: "break-all", overflow: "hidden"
+          }}
+        >
+          {title}
+        </div>
+      </foreignObject>
+    </svg>
+  );
+}
+    // ポータブルHTML用のソースコードインポート
+
+
+
+
+
+
+
+function App() {
+  const [flows, setFlows] = useState(sampleFlows);
+  const [activeFlowId, setActiveFlowId] = useState(sampleFlows[0].id);
+  const [activeNode, setActiveNode] = useState(null);
+
+  // リサイズ・開閉ステート
+  const [sidebarWidth, setSidebarWidth] = useState(260);
+  const [topHeight, setTopHeight] = useState(420);
+  const [isBottomOpen, setIsBottomOpen] = useState(true);
+  
+  const [isResizingX, setIsResizingX] = useState(false);
+  const [isResizingY, setIsResizingY] = useState(false);
+
+  // マウスドラッグによるペインサイズ変更処理
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isResizingX) {
+        // 左右スプリッター (左サイドバーの幅)
+        const newWidth = Math.max(200, Math.min(e.clientX, 500));
+        setSidebarWidth(newWidth);
+      }
+      if (isResizingY) {
+        // 上下スプリッター (右上フローチャートの高さ)
+        const headerHeight = 50;
+        const newHeight = Math.max(150, Math.min(e.clientY - headerHeight, window.innerHeight - headerHeight - 100));
+        setTopHeight(newHeight);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingX(false);
+      setIsResizingY(false);
+    };
+
+    if (isResizingX || isResizingY) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isResizingX, isResizingY]);
+
+  // 現在選択されているフロー
+  const currentFlow = flows.find((f) => f.id === activeFlowId) || flows[0];
+
+  // フローの切り替え
+  const handleSelectFlow = (id) => {
+    setActiveFlowId(id);
+    setActiveNode(null); // 詳細説明とプレビューをリセット
+  };
+
+  // ノードの選択
+  const handleSelectNode = (node) => {
+    setActiveNode(node);
+  };
+
+  // 下ペインの開閉トグル
+  const handleToggleBottom = () => {
+    setIsBottomOpen(!isBottomOpen);
+  };
+
+  // HTMLのダウンロード処理
+  const handleDownloadHTML = () => {
+    const cleanCode = (code) => {
+      if (!code) return "";
+      return code
+        .replace(/import\s+[\s\S]*?\s+from\s+['"].*?['"];?/g, '')
+        .replace(/export\s+default\s+function/g, 'function')
+        .replace(/export\s+default\s+/g, '')
+        .trim();
+    };
+
+    const iconsCode = `
+const Monitor = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect width="20" height="14" x="2" y="2" rx="2" />
+    <line x1="8" x2="16" y1="21" y2="21" />
+    <line x1="12" x2="12" y1="17" y2="21" />
+  </svg>
+);
+
+const Workflow = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect width="8" height="8" x="3" y="3" rx="2" />
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" />
+    <rect width="8" height="8" x="13" y="13" rx="2" />
+  </svg>
+);
+
+const Info = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </svg>
+);
+
+const HelpCircle = ({ size = 16, className, style, strokeWidth = 2 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <path d="M12 17h.01" />
+  </svg>
+);
+
+const ImageIcon = ({ size = 16, className, style, strokeWidth = 2 }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+  </svg>
+);
+
+const ZoomIn = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+    <line x1="11" x2="11" y1="8" y2="14" />
+    <line x1="8" x2="14" y1="11" y2="11" />
+  </svg>
+);
+
+const ZoomOut = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" x2="16.65" y1="21" y2="16.65" />
+    <line x1="8" x2="14" y1="11" y2="11" />
+  </svg>
+);
+
+const RotateCcw = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <polyline points="3 3 3 8 8 8" />
+  </svg>
+);
+`;
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI-Flow Studio | 業務フロー描画ポータブル</title>
+  <style>
+    ${rawCss}
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useRef, useLayoutEffect, useEffect, useCallback } = React;
+
+    ${iconsCode}
+
+    const sampleFlows = ${JSON.stringify(flows, null, 2)};
+
+    ${cleanCode(rawFlowSidebar)}
+    ${cleanCode(rawNodeDetail)}
+    ${cleanCode(rawScreenPreview)}
+    ${cleanCode(rawSwimlaneFlowChart)}
+    ${cleanCode(rawApp)}
+
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `flow-studio-${currentFlow.id || 'export'}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="app-container">
+      {/* ヘッダー */}
+      <header className="app-header">
+        <div className="logo">
+          <span>AI-Flow Studio</span>
+        </div>
+        <div className="header-meta" style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+          <span>データ・描画分離モデル (Sample Version 1.0)</span>
+          <button 
+            type="button" 
+            className="toggle-btn"
+            onClick={handleDownloadHTML}
+            style={{ 
+              backgroundColor: "var(--accent-color, #2563eb)", 
+              color: "white", 
+              border: "none",
+              padding: "4px 10px",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontWeight: "600",
+              fontSize: "0.75rem"
+            }}
+          >
+            HTMLダウンロード
+          </button>
+        </div>
+      </header>
+
+      {/* メインの2ペインレイアウト (サイドバー幅はドラッグ可変) */}
+      <div className="main-content-2pane">
+        {/* 左ペイン: フローの切り替え */}
+        <div style={{ width: sidebarWidth, display: "flex", flexShrink: 0 }}>
+          <FlowSidebar
+            flows={flows}
+            activeFlowId={activeFlowId}
+            onSelectFlow={handleSelectFlow}
+          />
+        </div>
+
+        {/* 左右分割スプリッター */}
+        <div 
+          className={`splitter-x ${isResizingX ? "active" : ""}`}
+          onMouseDown={() => setIsResizingX(true)}
+        />
+
+        {/* 右ペイン: 上部フロー ＆ 下部左右分割詳細 */}
+        <div className="right-dashboard-pane">
+          {/* 右上: 業務フロー描画 (高さはドラッグ可変、閉じている時は100%) */}
+          <div 
+            style={{ 
+              height: isBottomOpen ? topHeight : "100%", 
+              display: "flex", 
+              flexDirection: "column",
+              flexShrink: 0,
+              flexGrow: isBottomOpen ? 0 : 1
+            }}
+          >
+            <SwimlaneFlowChart
+              flow={currentFlow}
+              activeNodeId={activeNode ? activeNode.id : null}
+              onSelectNode={handleSelectNode}
+              isBottomOpen={isBottomOpen}
+              onToggleBottom={handleToggleBottom}
+            />
+          </div>
+
+          {/* 上下分割スプリッター (下ペインが開いている時のみ表示) */}
+          {isBottomOpen && (
+            <div 
+              className={`splitter-y ${isResizingY ? "active" : ""}`}
+              onMouseDown={() => setIsResizingY(true)}
+            />
+          )}
+
+          {/* 右下: 左右2分割 (左画面プレビュー / 右説明) */}
+          {isBottomOpen && (
+            <div className="bottom-detail-split" style={{ flexGrow: 1 }}>
+              <ScreenPreview activeNode={activeNode} />
+              <NodeDetail activeNode={activeNode} swimlanes={currentFlow.swimlanes} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>

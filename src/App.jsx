@@ -15,7 +15,10 @@ import rawNodeDetail from "./components/NodeDetail.jsx?raw";
 
 export default function App() {
   const [flows, setFlows] = useState(sampleFlows);
+  
+  // フローのバージョン管理
   const [activeFlowId, setActiveFlowId] = useState(sampleFlows[0].id);
+  const [activeFlowVer, setActiveFlowVer] = useState(sampleFlows[0].ver || "1.0");
   const [activeNode, setActiveNode] = useState(null);
 
   // リサイズ・開閉ステート
@@ -26,26 +29,53 @@ export default function App() {
   const [isResizingX, setIsResizingX] = useState(false);
   const [isResizingY, setIsResizingY] = useState(false);
 
-  // ノードの画面イメージを更新するハンドラー
+  // ノードの画面イメージを更新するハンドラー (過去履歴スタック対応)
   const handleUpdateNodeImage = (flowId, nodeId, imageSrc) => {
+    const dateStr = new Date().toLocaleString("ja-JP", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+
     setFlows((prevFlows) =>
       prevFlows.map((f) => {
         if (f.id !== flowId) return f;
         return {
           ...f,
-          nodes: f.nodes.map((n) =>
-            n.id === nodeId ? { ...n, image: imageSrc } : n
-          )
+          nodes: f.nodes.map((n) => {
+            if (n.id !== nodeId) return n;
+            const history = n.imageHistory || [];
+            // 現在の画面イメージがあれば履歴の先頭に退避する
+            const updatedHistory = n.image 
+              ? [{ url: n.image, date: dateStr + " に更新" }, ...history]
+              : history;
+            return {
+              ...n,
+              image: imageSrc,
+              imageHistory: updatedHistory
+            };
+          })
         };
       })
     );
-    // 選択中のノード情報も同期
-    setActiveNode((prev) =>
-      prev && prev.id === nodeId ? { ...prev, image: imageSrc } : prev
-    );
+
+    // 選択中のアクティブノード情報も同期
+    setActiveNode((prev) => {
+      if (!prev || prev.id !== nodeId) return prev;
+      const history = prev.imageHistory || [];
+      const updatedHistory = prev.image 
+        ? [{ url: prev.image, date: dateStr + " に更新" }, ...history]
+        : history;
+      return {
+        ...prev,
+        image: imageSrc,
+        imageHistory: updatedHistory
+      };
+    });
   };
 
-  // ノードの任意のフィールド (概要、手順、メモなど) を更新するハンドラー
+  // ノードの任意のフィールド (概要、手順、メモ、履歴リストなど) を更新するハンドラー
   const handleUpdateNodeFields = (flowId, nodeId, fields) => {
     setFlows((prevFlows) =>
       prevFlows.map((f) => {
@@ -96,12 +126,22 @@ export default function App() {
     };
   }, [isResizingX, isResizingY]);
 
-  // 現在選択されているフロー
-  const currentFlow = flows.find((f) => f.id === activeFlowId) || flows[0];
+  // 現在選択されているフロー (バージョンも考慮)
+  const currentFlow = flows.find((f) => f.id === activeFlowId && (f.ver || "1.0") === activeFlowVer) || 
+                      flows.find((f) => f.id === activeFlowId) || 
+                      flows[0];
 
-  // フローの切り替え
-  const handleSelectFlow = (id) => {
+  // フローおよびバージョンの切り替え
+  const handleSelectFlow = (id, ver) => {
     setActiveFlowId(id);
+    // もし指定されたバージョンがあればそれに切り替える
+    if (ver) {
+      setActiveFlowVer(ver);
+    } else {
+      // 指定がなければそのフローの最初のバージョンを選択
+      const matched = flows.find((f) => f.id === id);
+      setActiveFlowVer(matched?.ver || "1.0");
+    }
     setActiveNode(null); // 詳細説明とプレビューをリセット
   };
 
@@ -240,6 +280,19 @@ const Trash2 = ({ size = 16, className, style }) => (
     <line x1="14" x2="14" y1="11" y2="17" />
   </svg>
 );
+
+const History = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <polyline points="3 3 3 8 8 8" />
+  </svg>
+);
+
+const Check = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
 `;
 
     const htmlContent = `<!DOCTYPE html>
@@ -331,7 +384,11 @@ const Trash2 = ({ size = 16, className, style }) => (
           <span>AI-Flow Studio</span>
         </div>
         <div className="header-meta" style={{ display: "flex", gap: "15px", alignItems: "center" }}>
-          <span>データ・描画分離モデル (Sample Version 1.0)</span>
+          <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "var(--accent-color)" }}>
+            表示中: {currentFlow.title} {currentFlow.ver && `(Ver ${currentFlow.ver})`}
+          </span>
+          <span style={{ color: "var(--border-color)" }}>|</span>
+          <span>データ・描画分離モデル (Sample 1.0)</span>
           <button 
             type="button" 
             className="toggle-btn"
@@ -359,6 +416,7 @@ const Trash2 = ({ size = 16, className, style }) => (
           <FlowSidebar
             flows={flows}
             activeFlowId={activeFlowId}
+            activeFlowVer={activeFlowVer}
             onSelectFlow={handleSelectFlow}
           />
         </div>
@@ -405,6 +463,7 @@ const Trash2 = ({ size = 16, className, style }) => (
                 activeNode={activeNode} 
                 currentFlowId={currentFlow.id}
                 onUpdateImage={handleUpdateNodeImage}
+                onUpdateFields={handleUpdateNodeFields}
                 swimlanes={currentFlow.swimlanes}
               />
               <NodeDetail 
