@@ -161,7 +161,7 @@ const RotateCcw = ({ size = 16, className, style }) => (
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI-Flow Studio | 業務フロー描画ポータブル</title>
   <style>
-    ${rawCss}
+    \${rawCss}
     body {
       margin: 0;
       padding: 0;
@@ -170,7 +170,26 @@ const RotateCcw = ({ size = 16, className, style }) => (
   </style>
 </head>
 <body>
+  <!-- 起動エラー表示用の領域 -->
+  <div id="error-console" style="display:none; padding:20px; background:#fef2f2; border:2px solid #ef4444; color:#991b1b; font-family:monospace; margin:20px; border-radius:8px; z-index:9999; position:relative;">
+    <h3 style="margin-top:0;">⚠️ 起動エラーが発生しました</h3>
+    <pre id="error-message" style="white-space:pre-wrap;"></pre>
+  </div>
+
   <div id="root"></div>
+
+  <!-- エラー監視スクリプト -->
+  <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+      const consoleEl = document.getElementById('error-console');
+      const messageEl = document.getElementById('error-message');
+      if (consoleEl && messageEl) {
+        consoleEl.style.display = 'block';
+        messageEl.textContent = message + '\\n\\n場所: ' + source + ':' + lineno + ':' + colno + '\\n\\nスタック: ' + (error ? error.stack : 'なし');
+      }
+      return false;
+    };
+  </script>
 
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
@@ -179,15 +198,23 @@ const RotateCcw = ({ size = 16, className, style }) => (
   <script type="text/babel">
     const { useState, useRef, useLayoutEffect, useEffect, useCallback } = React;
 
-    ${iconsCode}
+    \${iconsCode}
 
-    const sampleFlows = ${JSON.stringify(flows, null, 2)};
+    const sampleFlows = \${JSON.stringify(flows, null, 2)};
 
-    ${cleanCode(rawFlowSidebar)}
-    ${cleanCode(rawNodeDetail)}
-    ${cleanCode(rawScreenPreview)}
-    ${cleanCode(rawSwimlaneFlowChart)}
-    ${cleanCode(rawApp)}
+    // ポータブル環境での未定義エラー防止用ダミー定義
+    const rawCss = "";
+    const rawApp = "";
+    const rawFlowSidebar = "";
+    const rawSwimlaneFlowChart = "";
+    const rawScreenPreview = "";
+    const rawNodeDetail = "";
+
+    \${cleanCode(rawFlowSidebar)}
+    \${cleanCode(rawNodeDetail)}
+    \${cleanCode(rawScreenPreview)}
+    \${cleanCode(rawSwimlaneFlowChart)}
+    \${cleanCode(rawApp)}
 
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
