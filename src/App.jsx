@@ -26,6 +26,44 @@ export default function App() {
   const [isResizingX, setIsResizingX] = useState(false);
   const [isResizingY, setIsResizingY] = useState(false);
 
+  // ノードの画面イメージを更新するハンドラー
+  const handleUpdateNodeImage = (flowId, nodeId, imageSrc) => {
+    setFlows((prevFlows) =>
+      prevFlows.map((f) => {
+        if (f.id !== flowId) return f;
+        return {
+          ...f,
+          nodes: f.nodes.map((n) =>
+            n.id === nodeId ? { ...n, image: imageSrc } : n
+          )
+        };
+      })
+    );
+    // 選択中のノード情報も同期
+    setActiveNode((prev) =>
+      prev && prev.id === nodeId ? { ...prev, image: imageSrc } : prev
+    );
+  };
+
+  // ノードの任意のフィールド (概要、手順、メモなど) を更新するハンドラー
+  const handleUpdateNodeFields = (flowId, nodeId, fields) => {
+    setFlows((prevFlows) =>
+      prevFlows.map((f) => {
+        if (f.id !== flowId) return f;
+        return {
+          ...f,
+          nodes: f.nodes.map((n) =>
+            n.id === nodeId ? { ...n, ...fields } : n
+          )
+        };
+      })
+    );
+    // 選択中のノード情報も同期
+    setActiveNode((prev) =>
+      prev && prev.id === nodeId ? { ...prev, ...fields } : prev
+    );
+  };
+
   // マウスドラッグによるペインサイズ変更処理
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -160,6 +198,46 @@ const RotateCcw = ({ size = 16, className, style }) => (
   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
     <polyline points="3 3 3 8 8 8" />
+  </svg>
+);
+
+const Upload = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" />
+    <line x1="12" x2="12" y1="3" y2="15" />
+  </svg>
+);
+
+const Edit3 = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
+
+const Save = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+    <polyline points="17 21 17 13 7 13 7 21" />
+    <polyline points="7 3 7 8 15 8" />
+  </svg>
+);
+
+const Plus = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <line x1="12" x2="12" y1="5" y2="19" />
+    <line x1="5" x2="19" y1="12" y2="12" />
+  </svg>
+);
+
+const Trash2 = ({ size = 16, className, style }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
+    <path d="M3 6h18" />
+    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+    <line x1="10" x2="10" y1="11" y2="17" />
+    <line x1="14" x2="14" y1="11" y2="17" />
   </svg>
 );
 `;
@@ -323,8 +401,20 @@ const RotateCcw = ({ size = 16, className, style }) => (
           {/* 右下: 左右2分割 (左画面プレビュー / 右説明) */}
           {isBottomOpen && (
             <div className="bottom-detail-split" style={{ flexGrow: 1 }}>
-              <ScreenPreview activeNode={activeNode} />
-              <NodeDetail activeNode={activeNode} swimlanes={currentFlow.swimlanes} />
+              <ScreenPreview 
+                activeNode={activeNode} 
+                currentFlowId={currentFlow.id}
+                onUpdateImage={handleUpdateNodeImage}
+                swimlanes={currentFlow.swimlanes}
+              />
+              <NodeDetail 
+                activeNode={activeNode} 
+                swimlanes={currentFlow.swimlanes} 
+                edges={currentFlow.edges}
+                nodes={currentFlow.nodes}
+                currentFlowId={currentFlow.id}
+                onUpdateFields={handleUpdateNodeFields}
+              />
             </div>
           )}
         </div>
