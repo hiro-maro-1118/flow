@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Monitor, Image as ImageIcon, ZoomIn, ZoomOut, RotateCcw, Upload, History, Trash2, Check } from "lucide-react";
+import { Monitor, Image as ImageIcon, ZoomIn, ZoomOut, RotateCcw, Upload, Trash2, Check, History } from "lucide-react";
 
 export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage, onUpdateFields, swimlanes = [] }) {
   const [zoom, setZoom] = useState(100);
@@ -65,20 +65,38 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
     setSelectedImageUrl(null); // 最新画像表示に戻す
   };
 
-  // 過去履歴画像の削除
-  const handleDeleteHistory = (historyUrl) => {
-    if (!activeNode || !currentFlowId || !onUpdateFields) return;
+  // 現在表示中の過去履歴画像の削除
+  const handleDeleteSelectedHistory = () => {
+    if (!selectedImageUrl || !activeNode || !currentFlowId || !onUpdateFields) return;
     const history = activeNode.imageHistory || [];
-    const updatedHistory = history.filter(h => h.url !== historyUrl);
+    const updatedHistory = history.filter(h => h.url !== selectedImageUrl);
     
     onUpdateFields(currentFlowId, activeNode.id, {
       imageHistory: updatedHistory
     });
-    
-    // 削除した画像を表示中だった場合は最新に戻す
-    if (selectedImageUrl === historyUrl) {
+    setSelectedImageUrl(null); // 削除後は最新画像に戻す
+  };
+
+  // プルダウン変更時のハンドラー
+  const handleHistorySelectChange = (e) => {
+    const val = e.target.value;
+    if (val === "latest") {
       setSelectedImageUrl(null);
+    } else {
+      const idx = parseInt(val, 10);
+      const history = activeNode.imageHistory || [];
+      if (history[idx]) {
+        setSelectedImageUrl(history[idx].url);
+      }
     }
+  };
+
+  // 現在表示されている画像のプルダウン用バリューを取得
+  const getSelectValue = () => {
+    if (selectedImageUrl === null) return "latest";
+    const history = activeNode.imageHistory || [];
+    const idx = history.findIndex(h => h.url === selectedImageUrl);
+    return idx !== -1 ? idx.toString() : "latest";
   };
 
   return (
@@ -94,30 +112,83 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
         </span>
         
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          {/* 過去画像の復元/最新化アクション */}
+          {/* 画像履歴切り替えプルダウン (履歴がある場合のみ表示) */}
+          {activeNode && activeNode.imageHistory && activeNode.imageHistory.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <History size={11} style={{ color: "var(--text-muted)" }} />
+              <select
+                value={getSelectValue()}
+                onChange={handleHistorySelectChange}
+                style={{
+                  fontSize: "0.65rem",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  border: "1px solid var(--border-color)",
+                  backgroundColor: "var(--bg-secondary)",
+                  color: "var(--text-primary)",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  maxWidth: "150px"
+                }}
+              >
+                <option value="latest">最新版 (表示中)</option>
+                {activeNode.imageHistory.map((h, idx) => (
+                  <option key={idx} value={idx}>
+                    {h.date}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 過去画像表示時のアクションボタン（復元・削除） */}
           {isViewingHistory && (
-            <button 
-              type="button" 
-              className="zoom-btn" 
-              onClick={handleRestoreHistory}
-              title="この過去画面を最新版に設定"
-              style={{ 
-                display: "flex", 
-                alignItems: "center", 
-                gap: "3px", 
-                padding: "2px 8px", 
-                height: "20px", 
-                fontSize: "0.65rem", 
-                backgroundColor: "var(--success-color, #16a34a)", 
-                color: "white", 
-                border: "none",
-                borderRadius: "3px",
-                cursor: "pointer"
-              }}
-            >
-              <Check size={10} />
-              最新版に復元
-            </button>
+            <div style={{ display: "flex", gap: "4px" }}>
+              <button 
+                type="button" 
+                className="zoom-btn" 
+                onClick={handleRestoreHistory}
+                title="この過去画面を最新版に設定"
+                style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "3px", 
+                  padding: "2px 8px", 
+                  height: "20px", 
+                  fontSize: "0.65rem", 
+                  backgroundColor: "var(--success-color, #16a34a)", 
+                  color: "white", 
+                  border: "none",
+                  borderRadius: "3px",
+                  cursor: "pointer"
+                }}
+              >
+                <Check size={10} />
+                復元
+              </button>
+              <button 
+                type="button" 
+                className="zoom-btn" 
+                onClick={handleDeleteSelectedHistory}
+                title="この過去画面を履歴から削除"
+                style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "3px", 
+                  padding: "2px 8px", 
+                  height: "20px", 
+                  fontSize: "0.65rem", 
+                  backgroundColor: "var(--danger-color, #dc2626)", 
+                  color: "white", 
+                  border: "none",
+                  borderRadius: "3px",
+                  cursor: "pointer"
+                }}
+              >
+                <Trash2 size={10} />
+                削除
+              </button>
+            </div>
           )}
 
           {activeNode && isImageNode && (
@@ -166,7 +237,7 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
       </div>
 
       <div className="preview-container" style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* メインプレビューエリア */}
+        {/* メインプレビューエリア (100% 全面表示) */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
           {currentImage ? (
             <div className="browser-mockup" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", margin: 0, borderRadius: 0, border: "none" }}>
@@ -236,101 +307,6 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
             </div>
           )}
         </div>
-
-        {/* 右側: 過去の画像履歴一覧パネル (履歴がある場合のみ表示) */}
-        {activeNode && activeNode.imageHistory && activeNode.imageHistory.length > 0 && (
-          <div 
-            style={{ 
-              width: "120px", 
-              borderLeft: "1px solid var(--border-color)", 
-              backgroundColor: "var(--bg-secondary)", 
-              display: "flex", 
-              flexDirection: "column",
-              height: "100%",
-              overflowY: "auto",
-              padding: "8px",
-              flexShrink: 0
-            }}
-          >
-            <div style={{ fontSize: "0.6rem", fontWeight: "bold", color: "var(--text-muted)", marginBottom: "8px", display: "flex", alignItems: "center", gap: "3px" }}>
-              <History size={10} />
-              過去の画面履歴
-            </div>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {/* 最新画像（現在）のボタン */}
-              <div 
-                onClick={() => setSelectedImageUrl(null)}
-                style={{ 
-                  cursor: "pointer",
-                  border: selectedImageUrl === null ? "1.5px solid var(--accent-color)" : "1px solid var(--border-color)",
-                  borderRadius: "4px",
-                  overflow: "hidden",
-                  backgroundColor: selectedImageUrl === null ? "var(--accent-glow)" : "transparent",
-                  padding: "2px"
-                }}
-              >
-                <div style={{ height: "50px", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {activeNode.image ? (
-                    <img src={activeNode.image} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <ImageIcon size={16} style={{ color: "var(--text-muted)" }} />
-                  )}
-                </div>
-                <div style={{ fontSize: "0.5rem", textAlign: "center", marginTop: "2px", fontWeight: "bold", color: "var(--text-primary)" }}>最新版 (表示中)</div>
-              </div>
-
-              {/* 過去画像の一覧 */}
-              {activeNode.imageHistory.map((h, idx) => {
-                const isSelected = selectedImageUrl === h.url;
-                return (
-                  <div 
-                    key={idx}
-                    onClick={() => setSelectedImageUrl(h.url)}
-                    style={{ 
-                      cursor: "pointer",
-                      border: isSelected ? "1.5px solid var(--danger-color)" : "1px solid var(--border-color)",
-                      borderRadius: "4px",
-                      overflow: "hidden",
-                      backgroundColor: isSelected ? "rgba(220, 38, 38, 0.05)" : "transparent",
-                      padding: "2px",
-                      position: "relative"
-                    }}
-                  >
-                    <div style={{ height: "50px", overflow: "hidden", backgroundColor: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <img src={h.url} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    </div>
-                    <div style={{ fontSize: "0.48rem", textAlign: "center", marginTop: "2px", color: "var(--text-muted)", wordBreak: "break-all" }}>{h.date}</div>
-                    
-                    {/* 履歴削除ボタン */}
-                    <button 
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteHistory(h.url);
-                      }}
-                      style={{
-                        position: "absolute",
-                        top: "2px",
-                        right: "2px",
-                        backgroundColor: "rgba(255,255,255,0.9)",
-                        border: "1px solid var(--border-color)",
-                        borderRadius: "2px",
-                        cursor: "pointer",
-                        padding: "1px",
-                        display: "flex",
-                        alignItems: "center",
-                        zIndex: 10
-                      }}
-                    >
-                      <Trash2 size={8} style={{ color: "var(--danger-color)" }} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
