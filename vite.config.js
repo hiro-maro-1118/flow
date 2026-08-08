@@ -12,6 +12,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     configureServer(server) {
+      console.log("\n>>> [Vite Server] Custom save-flow API middleware registered successfully. <<<\n");
+      
       // 編集したフローデータをサーバー側の実 JSON ファイルに書き戻すAPI
       server.middlewares.use((req, res, next) => {
         if (req.url && req.url.startsWith('/api/save-flow') && req.method === 'POST') {
