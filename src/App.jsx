@@ -79,13 +79,23 @@ export default function App() {
 
   // HTMLのダウンロード処理
   const handleDownloadHTML = () => {
-    const cleanCode = (code) => {
+    // [DOWNLOAD_HTML_START]
+    const cleanCode = (code, isApp = false) => {
       if (!code) return "";
-      return code
+      let cleaned = code
         .replace(/import\s+[\s\S]*?\s+from\s+['"].*?['"];?/g, '')
         .replace(/export\s+default\s+function/g, 'function')
         .replace(/export\s+default\s+/g, '')
         .trim();
+
+      if (isApp) {
+        // App.jsx の場合はポータブル版で不要かつ巨大なダウンロード処理を無害化する
+        cleaned = cleaned.replace(
+          /\/\/\s*\[DOWNLOAD_HTML_START\][\s\S]*?\/\/\s*\[DOWNLOAD_HTML_END\]/g,
+          'alert("このポータブルHTML版ではダウンロード機能は使用できません。");'
+        );
+      }
+      return cleaned;
     };
 
     const iconsCode = `
@@ -214,7 +224,7 @@ const RotateCcw = ({ size = 16, className, style }) => (
     ${cleanCode(rawNodeDetail)}
     ${cleanCode(rawScreenPreview)}
     ${cleanCode(rawSwimlaneFlowChart)}
-    ${cleanCode(rawApp)}
+    ${cleanCode(rawApp, true)}
 
     const container = document.getElementById('root');
     const root = ReactDOM.createRoot(container);
@@ -232,6 +242,7 @@ const RotateCcw = ({ size = 16, className, style }) => (
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+    // [DOWNLOAD_HTML_END]
   };
 
   return (
