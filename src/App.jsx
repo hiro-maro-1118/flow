@@ -66,7 +66,12 @@ export default function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(current)
         })
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          return res.json();
+        })
         .then((data) => {
           if (data.success) {
             console.log(`[Vite Server] Saved flow to file successfully: ${data.path}`);
@@ -152,7 +157,7 @@ export default function App() {
     );
   };
 
-  // 編集データをすべてリセットして初期状態に戻す (開発環境では確認後にローカルファイルを直接戻すことはしないが、キャッシュは消す)
+  // 編集データをすべてリセットして初期状態に戻す
   const handleResetData = () => {
     if (window.confirm("これまでにアップロードした画像や編集したテキスト、メモ履歴をすべて消去し、最初の状態に戻しますか？")) {
       try {
@@ -160,8 +165,6 @@ export default function App() {
       } catch (e) {
         console.error(e);
       }
-      // 開発サーバーをリスタート、またはファイルを元に戻す場合は git checkout 等が必要ですが、
-      // ここではメモリ上の状態を sampleFlows に初期化します
       setFlows(sampleFlows);
       setActiveNode(null);
       setActiveFlowId(sampleFlows[0].id);

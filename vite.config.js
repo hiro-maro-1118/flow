@@ -14,7 +14,7 @@ export default defineConfig({
     configureServer(server) {
       // 編集したフローデータをサーバー側の実 JSON ファイルに書き戻すAPI
       server.middlewares.use((req, res, next) => {
-        if (req.url === '/api/save-flow' && req.method === 'POST') {
+        if (req.url && req.url.startsWith('/api/save-flow') && req.method === 'POST') {
           let body = '';
           req.on('data', chunk => {
             body += chunk.toString();
