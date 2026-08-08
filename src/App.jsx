@@ -13,15 +13,20 @@ import rawSwimlaneFlowChart from "./components/SwimlaneFlowChart.jsx?raw";
 import rawScreenPreview from "./components/ScreenPreview.jsx?raw";
 import rawNodeDetail from "./components/NodeDetail.jsx?raw";
 
-// ローカルストレージからの初期データ取得
+// ローカルストレージからの初期データ取得 (開発環境 localhost ではファイルデータを優先)
 const getInitialFlows = () => {
-  try {
-    const saved = localStorage.getItem("flow_studio_data");
-    if (saved) {
-      return JSON.parse(saved);
+  const isLocalhost = typeof window !== 'undefined' && 
+                      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  
+  if (!isLocalhost) {
+    try {
+      const saved = localStorage.getItem("flow_studio_data");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Failed to load flows from localStorage", e);
     }
-  } catch (e) {
-    console.error("Failed to load flows from localStorage", e);
   }
   return sampleFlows;
 };
@@ -42,14 +47,46 @@ export default function App() {
   const [isResizingX, setIsResizingX] = useState(false);
   const [isResizingY, setIsResizingY] = useState(false);
 
-  // flows 状態の変更をローカルストレージに永続化
+  // 現在選択されているフロー (バージョンも考慮)
+  const currentFlow = flows.find((f) => f.id === activeFlowId && (f.ver || "1.0") === activeFlowVer) || 
+                      flows.find((f) => f.id === activeFlowId) || 
+                      flows[0];
+
+  // flows 状態の変更をローカル開発サーバーの実JSONファイル、またはポータブル時のlocalStorageに同期
   useEffect(() => {
-    try {
-      localStorage.setItem("flow_studio_data", JSON.stringify(flows));
-    } catch (e) {
-      console.error("Failed to save flows to localStorage", e);
+    const isLocalhost = typeof window !== 'undefined' && 
+                        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+    if (isLocalhost) {
+      // ローカル開発環境：APIを呼び出して src/data/*.json 実ファイルを直接書き換える
+      const current = flows.find((f) => f.id === activeFlowId && (f.ver || "1.0") === activeFlowVer);
+      if (current) {
+        fetch("/api/save-flow", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(current)
+        })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            console.log(`[Vite Server] Saved flow to file successfully: ${data.path}`);
+          } else {
+            console.error("[Vite Server] Save failed:", data.error);
+          }
+        })
+        .catch((err) => {
+          console.warn("[Vite Server] Could not connect to save API (using fallback):", err);
+        });
+      }
+    } else {
+      // ポータブルHTMLなどの環境：localStorage に退避する
+      try {
+        localStorage.setItem("flow_studio_data", JSON.stringify(flows));
+      } catch (e) {
+        console.error("Failed to save flows to localStorage", e);
+      }
     }
-  }, [flows]);
+  }, [flows, activeFlowId, activeFlowVer]);
 
   // ノードの画面イメージを更新するハンドラー (過去履歴スタック対応・バージョン独立)
   const handleUpdateNodeImage = (flowId, flowVer, nodeId, imageSrc) => {
@@ -115,7 +152,7 @@ export default function App() {
     );
   };
 
-  // 編集データをすべてリセットして初期状態に戻す
+  // 編集データをすべてリセットして初期状態に戻す (開発環境では確認後にローカルファイルを直接戻すことはしないが、キャッシュは消す)
   const handleResetData = () => {
     if (window.confirm("これまでにアップロードした画像や編集したテキスト、メモ履歴をすべて消去し、最初の状態に戻しますか？")) {
       try {
@@ -123,9 +160,10 @@ export default function App() {
       } catch (e) {
         console.error(e);
       }
+      // 開発サーバーをリスタート、またはファイルを元に戻す場合は git checkout 等が必要ですが、
+      // ここではメモリ上の状態を sampleFlows に初期化します
       setFlows(sampleFlows);
       setActiveNode(null);
-      // アクティブなバージョンを最初のフローに揃える
       setActiveFlowId(sampleFlows[0].id);
       setActiveFlowVer(sampleFlows[0].ver || "1.0");
     }
@@ -162,11 +200,6 @@ export default function App() {
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isResizingX, isResizingY]);
-
-  // 現在選択されているフロー (バージョンも考慮)
-  const currentFlow = flows.find((f) => f.id === activeFlowId && (f.ver || "1.0") === activeFlowVer) || 
-                      flows.find((f) => f.id === activeFlowId) || 
-                      flows[0];
 
   // フローおよびバージョンの切り替え
   const handleSelectFlow = (id, ver) => {
