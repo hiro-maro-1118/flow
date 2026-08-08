@@ -7,6 +7,7 @@ export default function NodeDetail({
   edges = [], 
   nodes = [], 
   currentFlowId, 
+  currentFlowVer,
   onUpdateFields 
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -32,8 +33,8 @@ export default function NodeDetail({
   const outEdges = activeNode ? edges.filter((e) => e.from === activeNode.id) : [];
 
   const handleSave = () => {
-    if (onUpdateFields && activeNode && currentFlowId) {
-      onUpdateFields(currentFlowId, activeNode.id, {
+    if (onUpdateFields && activeNode && currentFlowId && currentFlowVer) {
+      onUpdateFields(currentFlowId, currentFlowVer, activeNode.id, {
         description: editDesc,
         details: editDetails
       });
@@ -52,8 +53,8 @@ export default function NodeDetail({
     });
     const updatedMemos = [...currentMemos, { id: Date.now().toString(), text: newMemo, date: dateStr }];
     
-    if (onUpdateFields && activeNode && currentFlowId) {
-      onUpdateFields(currentFlowId, activeNode.id, { memos: updatedMemos });
+    if (onUpdateFields && activeNode && currentFlowId && currentFlowVer) {
+      onUpdateFields(currentFlowId, currentFlowVer, activeNode.id, { memos: updatedMemos });
       setNewMemo("");
     }
   };
@@ -61,8 +62,8 @@ export default function NodeDetail({
   const handleDeleteMemo = (memoId) => {
     const currentMemos = activeNode.memos || [];
     const updatedMemos = currentMemos.filter((m) => m.id !== memoId);
-    if (onUpdateFields && activeNode && currentFlowId) {
-      onUpdateFields(currentFlowId, activeNode.id, { memos: updatedMemos });
+    if (onUpdateFields && activeNode && currentFlowId && currentFlowVer) {
+      onUpdateFields(currentFlowId, currentFlowVer, activeNode.id, { memos: updatedMemos });
     }
   };
 
@@ -273,7 +274,7 @@ export default function NodeDetail({
                   ))
                 ) : (
                   <div style={{ textAlign: "center", padding: "10px", fontSize: "0.65rem", color: "var(--text-muted)", border: "1px dashed var(--border-color)", borderRadius: "4px" }}>
-                    メモはありません。設計の検討履歴を残せます。
+                    メモはありません。設計 of 検討履歴を残せます。
                   </div>
                 )}
               </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Monitor, Image as ImageIcon, ZoomIn, ZoomOut, RotateCcw, Upload, Trash2, Check, History } from "lucide-react";
 
-export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage, onUpdateFields, swimlanes = [] }) {
+export default function ScreenPreview({ activeNode, currentFlowId, currentFlowVer, onUpdateImage, onUpdateFields, swimlanes = [] }) {
   const [zoom, setZoom] = useState(100);
   const [selectedImageUrl, setSelectedImageUrl] = useState(null); // 履歴選択中の表示画像
   const fileInputRef = useRef(null);
@@ -24,8 +24,8 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (onUpdateImage && activeNode && currentFlowId) {
-          onUpdateImage(currentFlowId, activeNode.id, event.target.result);
+        if (onUpdateImage && activeNode && currentFlowId && currentFlowVer) {
+          onUpdateImage(currentFlowId, currentFlowVer, activeNode.id, event.target.result);
           setSelectedImageUrl(null); // アップロードした最新画像を表示
         }
       };
@@ -45,7 +45,7 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
 
   // 過去履歴画像の復元（最新版に設定）
   const handleRestoreHistory = () => {
-    if (!selectedImageUrl || !activeNode || !currentFlowId || !onUpdateFields) return;
+    if (!selectedImageUrl || !activeNode || !currentFlowId || !currentFlowVer || !onUpdateFields) return;
     
     // 現在の最新画像を履歴の先頭に退避させ、選択された過去画像を最新画像にする
     const dateStr = new Date().toLocaleString("ja-JP", {
@@ -58,7 +58,7 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
       ? [{ url: activeNode.image, date: dateStr + " に更新 (復元元)" }, ...filteredHistory]
       : filteredHistory;
 
-    onUpdateFields(currentFlowId, activeNode.id, {
+    onUpdateFields(currentFlowId, currentFlowVer, activeNode.id, {
       image: selectedImageUrl,
       imageHistory: updatedHistory
     });
@@ -67,11 +67,11 @@ export default function ScreenPreview({ activeNode, currentFlowId, onUpdateImage
 
   // 現在表示中の過去履歴画像の削除
   const handleDeleteSelectedHistory = () => {
-    if (!selectedImageUrl || !activeNode || !currentFlowId || !onUpdateFields) return;
+    if (!selectedImageUrl || !activeNode || !currentFlowId || !currentFlowVer || !onUpdateFields) return;
     const history = activeNode.imageHistory || [];
     const updatedHistory = history.filter(h => h.url !== selectedImageUrl);
     
-    onUpdateFields(currentFlowId, activeNode.id, {
+    onUpdateFields(currentFlowId, currentFlowVer, activeNode.id, {
       imageHistory: updatedHistory
     });
     setSelectedImageUrl(null); // 削除後は最新画像に戻す

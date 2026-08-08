@@ -29,8 +29,8 @@ export default function App() {
   const [isResizingX, setIsResizingX] = useState(false);
   const [isResizingY, setIsResizingY] = useState(false);
 
-  // ノードの画面イメージを更新するハンドラー (過去履歴スタック対応)
-  const handleUpdateNodeImage = (flowId, nodeId, imageSrc) => {
+  // ノードの画面イメージを更新するハンドラー (過去履歴スタック対応・バージョン独立)
+  const handleUpdateNodeImage = (flowId, flowVer, nodeId, imageSrc) => {
     const dateStr = new Date().toLocaleString("ja-JP", {
       month: "numeric",
       day: "numeric",
@@ -40,7 +40,8 @@ export default function App() {
 
     setFlows((prevFlows) =>
       prevFlows.map((f) => {
-        if (f.id !== flowId) return f;
+        // flowId かつ flowVer が一致するフローのみを更新対象にする
+        if (f.id !== flowId || (f.ver || "1.0") !== (flowVer || "1.0")) return f;
         return {
           ...f,
           nodes: f.nodes.map((n) => {
@@ -75,11 +76,12 @@ export default function App() {
     });
   };
 
-  // ノードの任意のフィールド (概要、手順、メモ、履歴リストなど) を更新するハンドラー
-  const handleUpdateNodeFields = (flowId, nodeId, fields) => {
+  // ノードの任意のフィールド (概要、手順、メモ、履歴リストなど) を更新するハンドラー (バージョン独立)
+  const handleUpdateNodeFields = (flowId, flowVer, nodeId, fields) => {
     setFlows((prevFlows) =>
       prevFlows.map((f) => {
-        if (f.id !== flowId) return f;
+        // flowId かつ flowVer が一致するフローのみを更新対象にする
+        if (f.id !== flowId || (f.ver || "1.0") !== (flowVer || "1.0")) return f;
         return {
           ...f,
           nodes: f.nodes.map((n) =>
@@ -462,6 +464,7 @@ const Check = ({ size = 16, className, style }) => (
               <ScreenPreview 
                 activeNode={activeNode} 
                 currentFlowId={currentFlow.id}
+                currentFlowVer={currentFlow.ver || "1.0"}
                 onUpdateImage={handleUpdateNodeImage}
                 onUpdateFields={handleUpdateNodeFields}
                 swimlanes={currentFlow.swimlanes}
@@ -472,6 +475,7 @@ const Check = ({ size = 16, className, style }) => (
                 edges={currentFlow.edges}
                 nodes={currentFlow.nodes}
                 currentFlowId={currentFlow.id}
+                currentFlowVer={currentFlow.ver || "1.0"}
                 onUpdateFields={handleUpdateNodeFields}
               />
             </div>
